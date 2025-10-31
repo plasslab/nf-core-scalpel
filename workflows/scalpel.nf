@@ -6,7 +6,8 @@
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_scalpel_pipeline'
-include { SALMON_INDEX }           from '../modules/nf-core/salmon/index/main.nf'
+include { ANNOTATION_PROCESSING  } from '../subworkflows/local/annotation_processing/main.nf'
+
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -24,15 +25,12 @@ workflow SCALPEL {
 
     ch_versions = Channel.empty()
 
-    ch_samplesheet.view()
-    // transcriptome_fasta.view()
-
-    // Indexing of transcriptome using Salmon
-    SALMON_INDEX(
+    
+    ANNOTATION_PROCESSING(
         genome_fasta,
-        transcriptome_fasta)
+        transcriptome_fasta
+    )
 
-    //
     // Collate and save software versions
     softwareVersionsToYAML(ch_versions)
         .collectFile(

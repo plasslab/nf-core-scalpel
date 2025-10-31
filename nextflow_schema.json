@@ -23,6 +23,14 @@
                     "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row. See [usage docs](https://nf-co.re/scalpel/usage#samplesheet-input).",
                     "fa_icon": "fas fa-file-csv"
                 },
+                "genome": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Path to the genome FASTA file.",
+                    "help_text": "Provide the path to the genome FASTA file that will be used for read alignment. Ensure that the file is properly formatted and accessible.",
+                    "fa_icon": "fas fa-dna"
+                },
                 "transcriptome": {
                     "type": "string",
                     "format": "file-path",
