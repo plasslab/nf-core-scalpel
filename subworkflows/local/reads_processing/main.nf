@@ -1,35 +1,40 @@
-// TODO nf-core: If in doubt look at other nf-core/subworkflows to see how we are doing things! :)
-//               https://github.com/nf-core/modules/tree/master/subworkflows
-//               You can also ask for help via your pull request or on the #subworkflows channel on the nf-core Slack workspace:
-//               https://nf-co.re/join
-// TODO nf-core: A subworkflow SHOULD import at least two modules
 
-include { SAMTOOLS_SORT      } from '../../../modules/nf-core/samtools/sort/main'
-include { SAMTOOLS_INDEX     } from '../../../modules/nf-core/samtools/index/main'
+include { BED_CONVERSION       } from '../../../modules/local/bedconversion/main.nf'
+include { READ_MAPPING        }  from '../../../modules/local/readmapping/main.nf'
 
 workflow READS_PROCESSING {
 
     take:
-    // TODO nf-core: edit input (take) channels
-    ch_bam // channel: [ val(meta), [ bam ] ]
+    ch_samples // channel: [ val(meta), [ bam ] ]
+    ch_isoform_gtf // channel: path to isoform GTF file
 
     main:
 
     ch_versions = Channel.empty()
 
-    // TODO nf-core: substitute modules here for the modules of your subworkflow
+    // Extract BAM files & defaults Barcodes tag
+    if( params.sequencing_platform == 'chromium' ) {
+        ch_samples.map{ meta, files -> tuple(meta, [files[2]+'/outs/possorted_genome_bam.bam', 
+                files[2]+'/outs/filtered_feature_bc_matrix/barcodes.tsv.gz']) }.set{ ch_bam_files }
+    } else if( params.sequencing_platform == 'dropseq' ) {
+        ch_samples.map{ meta, files -> tuple(meta, files[2]) }.set{ ch_bam_files }
+    } else {
+        log.error "Unsupported sequencing platform: ${params.sequencing_platform}. Supported platforms are: 'chromium' and 'dropseq'."
+        System.exit(1)
+    }
+    
+    // Convert BAM to BED files
+    BED_CONVERSION(
+        ch_bam_files)
+    ch_versions = ch_versions.mix(BED_CONVERSION.out.versions)
 
-    SAMTOOLS_SORT ( ch_bam )
-    ch_versions = ch_versions.mix(SAMTOOLS_SORT.out.versions.first())
+    BED_CONVERSION.out.bed_files.combine(ch_isoform_gtf).map{ meta, bed_file, chr_id, isoform_gtf -> 
+        tuple([meta.id, chr_id], bed_file, isoform_gtf) }.set { ch_bed_and_gtf_files }
 
-    SAMTOOLS_INDEX ( SAMTOOLS_SORT.out.bam )
-    ch_versions = ch_versions.mix(SAMTOOLS_INDEX.out.versions.first())
+    // READ_MAPPING(
+    //     ch_bed_and_gtf_files)
+
 
     emit:
-    // TODO nf-core: edit emitted channels
-    bam      = SAMTOOLS_SORT.out.bam           // channel: [ val(meta), [ bam ] ]
-    bai      = SAMTOOLS_INDEX.out.bai          // channel: [ val(meta), [ bai ] ]
-    csi      = SAMTOOLS_INDEX.out.csi          // channel: [ val(meta), [ csi ] ]
-
     versions = ch_versions                     // channel: [ versions.yml ]
 }

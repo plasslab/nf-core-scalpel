@@ -99,7 +99,7 @@ workflow PIPELINE_INITIALISATION {
     Channel
         .fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
         .map {
-            meta, fastq_1, fastq_2, cranger_path -> [ meta.id, meta + [ single_end:false ], [ fastq_1, fastq_2, cranger_path ] ]
+            meta, fastq_1, fastq_2, cranger_path -> [ meta.id, meta, [ fastq_1, fastq_2, cranger_path ] ]
         }
         .groupTuple()
         .map { samplesheet ->

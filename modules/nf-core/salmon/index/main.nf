@@ -1,6 +1,6 @@
 process SALMON_INDEX {
     tag "$transcript_fasta"
-    label "process_medium"
+    label "process_high_memory"
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
@@ -44,6 +44,7 @@ process SALMON_INDEX {
         -t $fasta \\
         $decoys \\
         $args \\
+        --keepDuplicates \\
         -i salmon
 
     cat <<-END_VERSIONS > versions.yml

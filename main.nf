@@ -14,48 +14,29 @@
     IMPORT FUNCTIONS / MODULES / SUBWORKFLOWS / WORKFLOWS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-
-include { SCALPEL  } from './workflows/scalpel'
+include { SCALPEL  }                from './workflows/scalpel'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_scalpel_pipeline'
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_scalpel_pipeline'
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    NAMED WORKFLOWS FOR PIPELINE
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
 
-//
-// WORKFLOW: Run main analysis pipeline depending on type of input
-//
+
 workflow NFCORE_SCALPEL {
-
     take:
     samplesheet // channel: samplesheet read in from --input
     genome_fasta // channel: genome FASTA file read in from --genome
     transcriptome_fasta // channel: transcriptome FASTA file read in from --transcriptome
+    genome_annotation // channel: genome annotation GTF file read in from --gtf
 
     main:
-
-    //
-    // WORKFLOW: Run pipeline
-    //
     SCALPEL (
         samplesheet,
         genome_fasta,
-        transcriptome_fasta
+        transcriptome_fasta,
+        genome_annotation
     )
 }
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    RUN MAIN WORKFLOW
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
 
 workflow {
-
     main:
-    
-    // SUBWORKFLOW: Run initialisation tasks
     
     PIPELINE_INITIALISATION (
         params.version,
@@ -69,17 +50,13 @@ workflow {
         params.show_hidden
     )
 
-    //
-    // WORKFLOW: Run main workflow
-    //
     NFCORE_SCALPEL (
         PIPELINE_INITIALISATION.out.samplesheet,
         params.genome,
-        params.transcriptome
+        params.transcriptome,
+        params.gtf
     )
     
-    // SUBWORKFLOW: Run completion tasks
-    //
     // PIPELINE_COMPLETION (
     //     params.email,
     //     params.email_on_fail,
@@ -89,9 +66,3 @@ workflow {
     //     params.hook_url,
     // )
 }
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    THE END
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
