@@ -10,9 +10,9 @@
             "type": "object",
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
-            "required": ["input", "transcriptome","outdir"],
+            "required": ["samplesheet", "genome", "transcriptome", "gtf", "outdir"],
             "properties": {
-                "input": {
+                "samplesheet": {
                     "type": "string",
                     "format": "file-path",
                     "exists": true,
@@ -22,6 +22,14 @@
                     "description": "Path to comma-separated file containing information about the samples in the experiment.",
                     "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row. See [usage docs](https://nf-co.re/scalpel/usage#samplesheet-input).",
                     "fa_icon": "fas fa-file-csv"
+                },
+                "gtf": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Path to GTF annotation file",
+                    "help_text": "Genome annotation file in GTF format",
+                    "fa_icon": "fas fa-file-code"
                 },
                 "genome": {
                     "type": "string",
@@ -184,6 +192,49 @@
                     "description": "Display hidden parameters in the help message (only works when --help or --help_full are provided)."
                 }
             }
+        },
+        "pipeline_options": {
+            "title": "Pipeline options",
+            "type": "object",
+            "fa_icon": "fas fa-cogs",
+            "description": "Options specific to the scalpel pipeline for isoform quantification.",
+            "properties": {
+                "sequencing_platform": {
+                    "type": "string",
+                    "default": "chromium",
+                    "description": "Sequencing platform used for the experiment.",
+                    "help_text": "Specify the single-cell sequencing platform. Supported values: chromium, dropseq, etc.",
+                    "fa_icon": "fas fa-microscope"
+                },
+                "barcodes_whitelist": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Path to barcode whitelist file.",
+                    "help_text": "Optional path to a file containing valid cell barcodes.",
+                    "fa_icon": "fas fa-list"
+                },
+                "libtype": {
+                    "type": "string",
+                    "default": "A",
+                    "description": "Library type for Salmon quantification.",
+                    "help_text": "Salmon library type. Use 'A' for automatic detection, or specify manually (e.g., ISR, ISF, etc.).",
+                    "fa_icon": "fas fa-book"
+                },
+                "tr_distance_thr": {
+                    "type": "integer",
+                    "default": 2000,
+                    "description": "Transcript distance threshold for APA characterization.",
+                    "help_text": "Maximum distance (in bp) between transcript ends to consider them as alternative polyadenylation sites.",
+                    "fa_icon": "fas fa-ruler"
+                },
+                "tr_end_thr": {
+                    "type": "integer",
+                    "default": 30,
+                    "description": "Transcript end threshold.",
+                    "help_text": "Threshold (in bp) for transcript end position filtering.",
+                    "fa_icon": "fas fa-ruler-vertical"
+                }
+            }
         }
     },
     "allOf": [
@@ -195,6 +246,9 @@
         },
         {
             "$ref": "#/$defs/generic_options"
+        },
+        {
+            "$ref": "#/$defs/pipeline_options"
         }
     ]
 }

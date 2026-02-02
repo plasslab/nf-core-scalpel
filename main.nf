@@ -31,8 +31,7 @@ workflow NFCORE_SCALPEL {
         samplesheet,
         genome_fasta,
         transcriptome_fasta,
-        genome_annotation
-    )
+        genome_annotation)
 }
 
 workflow {
@@ -44,18 +43,17 @@ workflow {
         params.monochrome_logs,
         args,
         params.outdir,
-        params.input,
+        params.samplesheet,
         params.help,
         params.help_full,
-        params.show_hidden
-    )
+        params.show_hidden)
+
 
     NFCORE_SCALPEL (
         PIPELINE_INITIALISATION.out.samplesheet,
-        params.genome,
-        params.transcriptome,
-        params.gtf
-    )
+        channel.fromPath(params.genome, checkIfExists: true).collect(),
+        channel.fromPath(params.transcriptome, checkIfExists: true).collect(),
+        channel.fromPath(params.gtf, checkIfExists: true).collect())
     
     // PIPELINE_COMPLETION (
     //     params.email,
