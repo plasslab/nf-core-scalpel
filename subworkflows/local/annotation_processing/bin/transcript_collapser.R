@@ -105,14 +105,23 @@ check.stats1 = distinct(result, gene_name, transcript_collapseds, n_isoforms_in_
         nb.isoforms = sum(n_isoforms_in_profile),
         nb.collapseds = nb.collapseds$nb.collapseds
     )
- 
-stats_output <- c(
-    paste0("- Statistic about annotation processing - ", result$seqnames[1]),
-    paste("Number of genes processed: ", check.stats1$nb.genes),
-    paste("Number of isoforms before collapsing: ", check.stats1$nb.isoforms),
-    paste("Number of collapsed isoforms: ", check.stats1$nb.collapseds)
+
+stats.dat = paste0(result$seqnames[1], "\t", check.stats1$nb.genes, "\t", check.stats1$nb.isoforms, "\t", check.stats1$nb.collapseds)
+system(
+    paste0(
+        "echo ", 
+        stats.dat, 
+        " > stats.txt")
 )
-writeLines(stats_output, con = "stats.txt")
+       
+    
+# stats_output <- c(
+#     # paste0("- Statistic about annotation processing - ", result$seqnames[1]),
+#     paste("Number of genes processed: ", check.stats1$nb.genes),
+#     paste("Number of isoforms before collapsing: ", check.stats1$nb.isoforms),
+#     paste("Number of collapsed isoforms: ", check.stats1$nb.collapseds)
+# )
+# writeLines(stats_output, con = "stats.txt")
 
 # Write output
 base::cat("Writing output to:", args$output, "\n")

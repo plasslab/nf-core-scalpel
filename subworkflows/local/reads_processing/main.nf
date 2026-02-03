@@ -1,6 +1,4 @@
 
-// include { BED_CONVERSION       } from '../../../modules/local/bedconversion/main.nf'
-// include { READ_MAPPING        }  from '../../../modules/local/readmapping/main.nf'
 
 workflow READS_PROCESSING {
 
@@ -34,9 +32,8 @@ workflow READS_PROCESSING {
     // ch_bam_files.view()
     
     // Convert BAM to BED files
-    BED_CONVERSION(
-        ch_bam_files)
-    // ch_versions = ch_versions.mix(BED_CONVERSION.out.versions)
+    BED_CONVERSION(ch_bam_files)
+    ch_versions = ch_versions.mix(BED_CONVERSION.out.versions)
 
     // BED_CONVERSION.out.bed_files.combine(ch_all_transcripts).map{ meta, bed_file, chr_id, all_transcripts -> 
     //     tuple([meta.id, chr_id], bed_file, all_transcripts) }.set { ch_bed_and_gtf_files }
@@ -54,7 +51,7 @@ process BED_CONVERSION {
     label 'process_single'
     tag "${meta.id}"
 
-    conda "biconda::samtools=1.23 bioconda::bedops=2.4.42 bioconda::gawk=5.3.1"
+    conda "bioconda::samtools=1.23 bioconda::bedops=2.4.42 conda-forge::gawk=5.3.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'oras://community.wave.seqera.io/library/bedops_samtools_gawk:bcf972bff00da13a' :
         'community.wave.seqera.io/library/bedops_samtools_gawk:00501a873fceef75' }"
@@ -64,7 +61,7 @@ process BED_CONVERSION {
 
     output:
     path("*.bed"), emit: bed_files
-    path "versions.yml"
+    path "versions.yml",   emit: versions
 
     script:
     def barcode_file = sample[1].toString().endsWith('.gz') ? "<(zcat ${sample[1]})" : "${sample[1]}"

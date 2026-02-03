@@ -43,22 +43,29 @@ workflow ANNOTATION_PROCESSING {
 
     // Isoform Selection based on 3'end region profile
     ISOFORM_SELECTION(
-        TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING.out.gtf_entries,
+        TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING.out.gtf_entries.flatten(),
         file("${projectDir}/subworkflows/local/annotation_processing/bin/transcript_collapser.R"),
         params.distance_3end,
         params.distance_profile)
     ch_versions = ch_versions.mix(ISOFORM_SELECTION.out.versions)
-    ISOFORM_SELECTION.out.stats.view{ stats -> "\n" + stats.text}
+
+    // - More info about selected isoforms
+    ISOFORM_SELECTION.out.stats
+        .collectFile(name: 'merged_stats.txt', newLine: false).set{ statistic_annotation_processing}
+    statistic_annotation_processing.view( 
+        stats -> "\n-- Statistic related to annotation processing --\nseqnames\tnb.genes\tnb.isoforms\tnb.collapseds\n" + stats.text)
     
     emit:
     all_transcripts = ISOFORM_SELECTION.out.full_gtf
-    all_stats = ISOFORM_SELECTION.out.stats
+    all_stats = statistic_annotation_processing
     versions = ch_versions
 }
 
 
 
 // local tasks
+
+
 
 process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
     label 'process_single'
