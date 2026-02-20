@@ -1,0 +1,1 @@
+cellranger count --id=SRR6129051 --transcriptome=/data/fake_data/DATAS/refdata-gex-mm10-2020-A --fastqs=/data/fake_data/DATAS/GSE104556/FASTQs/FASTQ_files/ --sample=SRR6129051_2000000 --localcores=96 --force-cells 1200

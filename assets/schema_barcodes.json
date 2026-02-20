@@ -1,0 +1,26 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/nf-core/scalpel/master/assets/schema_barcodes.json",
+    "title": "nf-core/scalpel pipeline - params.barcodes_whitelist schema",
+    "description": "Schema for the file provided with params.barcodes_whitelist",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "sample": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Sample name must be provided and cannot contain spaces",
+                "meta": ["id"]
+            },
+            "barcodes": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "description": "Path to a text file containing barcodes (one per line)",
+                "errorMessage": "Barcodes file must exist and be a valid file path"
+            }
+        },
+        "required": ["sample", "barcodes"]
+    }
+}

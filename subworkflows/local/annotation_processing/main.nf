@@ -48,33 +48,29 @@ workflow ANNOTATION_PROCESSING {
         params.distance_3end,
         params.distance_profile)
     ch_versions = ch_versions.mix(ISOFORM_SELECTION.out.versions)
-
-    // - More info about selected isoforms
-    ISOFORM_SELECTION.out.stats
-        .collectFile(name: 'merged_stats.txt', newLine: false).set{ statistic_annotation_processing}
-    statistic_annotation_processing.view( 
-        stats -> "\n-- Statistic related to annotation processing --\nseqnames\tnb.genes\tnb.isoforms\tnb.collapseds\n" + stats.text)
+    
+    // Collect all stats into a single log file
+    ch_annotation_log = ISOFORM_SELECTION.out.stats
+        .collectFile(name: 'annotation_processing.log', storeDir: "${params.outdir}/pipeline_info", newLine: true)
     
     emit:
     all_transcripts = ISOFORM_SELECTION.out.full_gtf
-    all_stats = statistic_annotation_processing
+    all_stats = ch_annotation_log
     versions = ch_versions
 }
 
 
 
-// local tasks
-
-
+// local tasks //
 
 process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
     label 'process_single'
     tag "${genome_annotation}"
 
-    conda "conda-forge::r-tidyr=1.3.2 conda-forge::r-dplyr=1.1.4 bioconda::bioconductor-rtracklayer=1.66.0"
+    conda "conda-forge::r-biocmanager=1.30.27 conda-forge::r-dplyr=1.1.4 conda-forge::r-tidyr=1.3.2"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/bioconductor-rtracklayer_r-argparse_r-dplyr_r-tidyr:e9a06ddef3cd9da1' :
-        'community.wave.seqera.io/library/bioconductor-rtracklayer_r-argparse_r-dplyr_r-tidyr:aa98afd503eec838' }"
+        'oras://community.wave.seqera.io/library/bioconductor-rtracklayer_r-dplyr_r-tidyr:51cab57e4da44f82' :
+        'community.wave.seqera.io/library/bioconductor-rtracklayer_r-dplyr_r-tidyr:c2b5a953efeb031b' }"
 
     input:
         file quant_files
@@ -91,12 +87,25 @@ process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
     library(dplyr)
     options(width=300)
 
-    #reading...
-    quant_data = do.call(rbind, lapply(list.files(path = ".", pattern = "*.sf", full.names = T, recursive=T), function(x) read.table(x, sep="\\t", header=T) %>% dplyr::mutate(sample_id=x)))
-    gtf = data.frame(rtracklayer::import("${genome_annotation}"))[,c("type", "seqnames", "start", "end", "width", "strand", "gene_id", "gene_name", "transcript_id", "transcript_name")] %>% subset(type=="exon")
+    # - reading...
+    quant_data = do.call(
+        rbind, 
+        lapply(
+            list.files(
+                path = ".", 
+                pattern = "*.sf", 
+                full.names = T, 
+                recursive=T),
+            function(x) read.table(x, sep="\\t", header=T) %>% dplyr::mutate(sample_id=x)))
+    
+    gtf = data.frame(
+        rtracklayer::import("${genome_annotation}"))[,
+            c("type", "seqnames", "start", "end", "width", 
+                "strand", "gene_id", "gene_name", "transcript_id", "transcript_name")] %>%
+            subset(type=="exon")
     gtf = gtf[,-1] #remove type column
 
-    #process salmon bulk quant data...
+    # - process salmon bulk quant data...
     quant_data\$transcript_id = stringr::str_split_fixed(quant_data\$Name, pattern="\\\\|", n=2)[,1]
     quant_data = quant_data %>% 
         dplyr::distinct(sample_id,transcript_id, TPM) %>%
@@ -106,7 +115,7 @@ process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
         dplyr::distinct(transcript_id, meanTPM) %>%
         dplyr::ungroup()
 
-    #merge with gtf
+    # - merge with gtf...
     gtf = dplyr::left_join(gtf, quant_data, by=c("transcript_id"))
 
     #calculate transcript bulk average TPM per gene
@@ -138,16 +147,20 @@ process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
         dplyr::ungroup() %>% data.frame()
 
 
-    #split and write bulk average TPM per gene by chromosome
-    dev = lapply(unique(gtf\$seqnames), function(chr) gtf %>% subset(seqnames==chr) %>% write.table(file=paste0(chr,"_tpm.bed"), sep="\\t", row.names=F, quote=F))
+    # - split and write bulk average TPM per gene by chromosome
+    dev = lapply(
+        unique(gtf\$seqnames), 
+        function(chr) gtf %>% subset(seqnames==chr) %>%
+             write.table(file=paste0(chr,"_tpm.bed"), 
+             sep="\\t", row.names=F, quote=F))
 
-    # Write versions.yml from R
+    # - Write versions.yml from R
     writeLines(c(
-        '\"!{task.process}\":',
-        paste0('    R: \"', R.version.string, '\"'),
-        paste0('    tidyr: \"', packageVersion("tidyr"), '\"'),
-        paste0('    dplyr: \"', packageVersion("dplyr"), '\"'),
-        paste0('    rtracklayer: \"', packageVersion("rtracklayer"), '\"')
+        '"${task.process}":',
+        paste0('    R: "', R.version.string, '"'),
+        paste0('    tidyr: "', packageVersion("tidyr"), '"'),
+        paste0('    dplyr: "', packageVersion("dplyr"), '"'),
+        paste0('    rtracklayer: "', packageVersion("rtracklayer"), '"')
     ), "versions.yml")
     """
     stub:
@@ -161,7 +174,7 @@ process ISOFORM_SELECTION{
     label 'process_single'
     tag "${gtf_entries}"
 
-    conda "conda-forge::r-tidyr=1.3.2 conda-forge::r-dplyr=1.1.4 conda-forge::r-argparse=2.3.1"
+    conda "conda-forge::r-argparse=2.3.1 conda-forge::r-tidyr=1.3.2 conda-forge::r-dplyr=1.1.4"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'oras://community.wave.seqera.io/library/r-argparse_r-dplyr_r-tidyr:85542ba539718d05' :
         'community.wave.seqera.io/library/r-argparse_r-dplyr_r-tidyr:844cdec398eb87bd' }"

@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 require(argparse)
-require(dplyr)
+
 
 # Parser setup
 parser <- argparse::ArgumentParser(description = "Collapse transcripts by isoform end profile")

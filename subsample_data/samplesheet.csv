@@ -1,0 +1,5 @@
+sample,fastq_1,fastq_2,cranger_path
+SRR6129050,/Users/franz/projects/nf-core-scalpel/subsample_data/reads/SRR6129050_1000000_S1_L001_R1_001.fastq.gz,/Users/franz/projects/nf-core-scalpel/subsample_data/reads/SRR6129050_1000000_S1_L001_R2_001.fastq.gz,/Users/franz/projects/nf-core-scalpel/subsample_data/cellranger_samples/SRR6129050
+SRR6129051,/Users/franz/projects/nf-core-scalpel/subsample_data/reads/SRR6129051_1000000_S1_L001_R1_001.fastq.gz,/Users/franz/projects/nf-core-scalpel/subsample_data/reads/SRR6129051_1000000_S1_L001_R2_001.fastq.gz,/Users/franz/projects/nf-core-scalpel/subsample_data/cellranger_samples/SRR6129051
+
+

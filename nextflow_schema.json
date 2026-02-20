@@ -59,6 +59,17 @@
                     "fa_icon": "fas fa-envelope",
                     "help_text": "Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to specify this on the command line for every run.",
                     "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$"
+                },
+                "barcodes_whitelist": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "schema": "assets/schema_barcodes.json",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$",
+                    "description": "Optional CSV file mapping samples to custom barcode whitelist files.",
+                    "help_text": "A comma-separated file with columns: sample,barcodes. Each barcodes file should contain one barcode per line. When provided, reads will be filtered to retain only those matching the specified barcodes.",
+                    "fa_icon": "fas fa-barcode"
                 }
             }
         },
@@ -220,18 +231,18 @@
                     "help_text": "Salmon library type. Use 'A' for automatic detection, or specify manually (e.g., ISR, ISF, etc.).",
                     "fa_icon": "fas fa-book"
                 },
-                "tr_distance_thr": {
+                "distance_profile": {
                     "type": "integer",
                     "default": 2000,
-                    "description": "Transcript distance threshold for APA characterization.",
-                    "help_text": "Maximum distance (in bp) between transcript ends to consider them as alternative polyadenylation sites.",
+                    "description": "Distance profile threshold for transcript collapsing.",
+                    "help_text": "Maximum distance (in bp) from 3' end to consider for grouping transcripts with similar expression profiles.",
                     "fa_icon": "fas fa-ruler"
                 },
-                "tr_end_thr": {
+                "distance_3end": {
                     "type": "integer",
-                    "default": 30,
-                    "description": "Transcript end threshold.",
-                    "help_text": "Threshold (in bp) for transcript end position filtering.",
+                    "default": 50,
+                    "description": "Distance threshold for 3' end clustering.",
+                    "help_text": "Maximum distance (in bp) between 3' ends to cluster transcripts together during isoform collapsing.",
                     "fa_icon": "fas fa-ruler-vertical"
                 }
             }
