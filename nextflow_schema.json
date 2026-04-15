@@ -10,7 +10,7 @@
             "type": "object",
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
-            "required": ["samplesheet", "genome", "transcriptome", "gtf", "outdir"],
+            "required": ["samplesheet", "genome", "transcriptome", "gtf", "outdir", "ip_reference"],
             "properties": {
                 "samplesheet": {
                     "type": "string",
@@ -70,6 +70,14 @@
                     "description": "Optional CSV file mapping samples to custom barcode whitelist files.",
                     "help_text": "A comma-separated file with columns: sample,barcodes. Each barcodes file should contain one barcode per line. When provided, reads will be filtered to retain only those matching the specified barcodes.",
                     "fa_icon": "fas fa-barcode"
+                },
+                "ip_reference": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Path to the internal priming reference file.",
+                    "help_text": "Path to a tar.gz archive containing the internal priming reference track used to filter reads during reads processing.",
+                    "fa_icon": "fas fa-filter"
                 }
             }
         },
@@ -201,49 +209,56 @@
                 "show_hidden": {
                     "type": "boolean",
                     "description": "Display hidden parameters in the help message (only works when --help or --help_full are provided)."
-                }
-            }
-        },
-        "pipeline_options": {
-            "title": "Pipeline options",
-            "type": "object",
-            "fa_icon": "fas fa-cogs",
-            "description": "Options specific to the scalpel pipeline for isoform quantification.",
-            "properties": {
+                },
                 "sequencing_platform": {
                     "type": "string",
                     "default": "chromium",
                     "description": "Sequencing platform used for the experiment.",
-                    "help_text": "Specify the single-cell sequencing platform. Supported values: chromium, dropseq, etc.",
-                    "fa_icon": "fas fa-microscope"
-                },
-                "barcodes_whitelist": {
-                    "type": "string",
-                    "format": "file-path",
-                    "description": "Path to barcode whitelist file.",
-                    "help_text": "Optional path to a file containing valid cell barcodes.",
-                    "fa_icon": "fas fa-list"
+                    "help_text": "Specify the single-cell sequencing platform. Supported values: chromium, dropseq.",
+                    "fa_icon": "fas fa-microscope",
+                    "enum": ["chromium", "dropseq"]
                 },
                 "libtype": {
                     "type": "string",
                     "default": "A",
                     "description": "Library type for Salmon quantification.",
-                    "help_text": "Salmon library type. Use 'A' for automatic detection, or specify manually (e.g., ISR, ISF, etc.).",
+                    "help_text": "Salmon library type. Use 'A' for automatic detection, or specify manually (e.g., ISR, ISF).",
                     "fa_icon": "fas fa-book"
                 },
                 "distance_profile": {
                     "type": "integer",
-                    "default": 2000,
-                    "description": "Distance profile threshold for transcript collapsing.",
-                    "help_text": "Maximum distance (in bp) from 3' end to consider for grouping transcripts with similar expression profiles.",
+                    "default": 600,
+                    "description": "Distance threshold (bp) for reads mapping to transcript profile.",
+                    "help_text": "Maximum transcriptomic distance (in bp) from the 3' end to consider when mapping reads to transcripts.",
                     "fa_icon": "fas fa-ruler"
                 },
                 "distance_3end": {
                     "type": "integer",
                     "default": 50,
-                    "description": "Distance threshold for 3' end clustering.",
+                    "description": "Distance threshold (bp) for 3' end clustering.",
                     "help_text": "Maximum distance (in bp) between 3' ends to cluster transcripts together during isoform collapsing.",
                     "fa_icon": "fas fa-ruler-vertical"
+                },
+                "distance_ip": {
+                    "type": "integer",
+                    "default": 60,
+                    "description": "Distance threshold (bp) for internal priming filtering.",
+                    "help_text": "Maximum distance (in bp) used when filtering reads against the internal priming reference.",
+                    "fa_icon": "fas fa-ruler"
+                },
+                "gene_fraction": {
+                    "type": "string",
+                    "default": "98%",
+                    "description": "Percentile threshold for gene-level TPM filtering.",
+                    "help_text": "Percentile value (e.g. '98%') used to filter lowly expressed transcripts based on gene-level TPM distribution during isoform selection.",
+                    "fa_icon": "fas fa-percent"
+                },
+                "binsize": {
+                    "type": "integer",
+                    "default": 20,
+                    "description": "Bin size (bp) for probability distribution computation.",
+                    "help_text": "Size of the bins (in base pairs) used when computing the fragment length probability distribution during isoform quantification.",
+                    "fa_icon": "fas fa-th"
                 }
             }
         }
@@ -257,9 +272,6 @@
         },
         {
             "$ref": "#/$defs/generic_options"
-        },
-        {
-            "$ref": "#/$defs/pipeline_options"
         }
     ]
 }

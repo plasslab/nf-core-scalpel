@@ -1,20 +1,32 @@
 #!/usr/bin/env Rscript
 
-require(argparse)
+suppressPackageStartupMessages(require(argparse, quietly =TRUE))
+suppressPackageStartupMessages(library(data.table, quietly = TRUE))
+suppressPackageStartupMessages(library(dplyr, quietly = TRUE))
 
 
 # Parser setup
-parser <- argparse::ArgumentParser(description = "Collapse transcripts by isoform end profile")
-parser$add_argument("--input", "-i", required = TRUE, help = "Input BED file (preprocessed GTF)")
-parser$add_argument("--output", "-o", required = TRUE, help = "Output file with collapsed_transcripts column")
-parser$add_argument("--distance_3end", "-d3", type = "integer", default = 30, 
-                    help = "Maximum distance between 3' ends (default: 30bp)")
-parser$add_argument("--distance_profile", "-dp", type = "integer", default = 600,
-                    help = "Maximum relative transcriptomic distance (default: 600bp)")
+parser <- argparse::ArgumentParser(
+    description = "Collapse transcripts by isoform end profile")
+parser$add_argument("--input", "-i", 
+    required = TRUE, help = "Input BED file (preprocessed GTF)")
+parser$add_argument("--output", "-o", 
+    required = TRUE, help = "Output file with collapsed_transcripts column")
+parser$add_argument("--distance_3end", 
+    "-d3", type = "integer", default = 30,
+    help = "Maximum distance between 3' ends (default: 30bp)")
+parser$add_argument("--distance_profile", "-dp", 
+    type = "integer", default = 600, 
+    help = "Maximum relative transcriptomic distance (default: 600bp)")
 args <- parser$parse_args()
 
+
 # Load the function
-groupIsoformEndProfile <- function(gtf_tab_with_rel_coords, distance_3end = 30, distance_profile = 600) {
+groupIsoformEndProfile <- function(
+    gtf_tab_with_rel_coords, 
+    distance_3end = 30, 
+    distance_profile = 600
+) {
     cluster_by_proximity <- function(x, distance) {
         if (length(x) == 0) return(integer(0))
         if (length(x) == 1) return(1L)
@@ -38,10 +50,20 @@ groupIsoformEndProfile <- function(gtf_tab_with_rel_coords, distance_3end = 30, 
             offset_to_ref = abs(cluster_3end_ref - three_prime_end)
         ) %>%
         dplyr::ungroup() %>%
-        dplyr::select(gene_id, transcript_name, cluster_3end, three_prime_end, cluster_3end_ref, offset_to_ref)
+        dplyr::select(
+            gene_id, 
+            transcript_name, 
+            cluster_3end, 
+            three_prime_end, 
+            cluster_3end_ref, 
+            offset_to_ref)
     
     exons_with_rel_boundary <- gtf_tab_with_rel_coords %>%
-        dplyr::left_join(last_exons, by = c("gene_id", "transcript_name"), relationship = "many-to-one") %>%
+        dplyr::left_join(
+            last_exons, 
+            by = c("gene_id", "transcript_name"), 
+            relationship = "many-to-one"
+        ) %>%
         dplyr::filter(!is.na(cluster_3end)) %>%
         dplyr::mutate(
             startR_adj = startR + offset_to_ref,
@@ -71,59 +93,55 @@ groupIsoformEndProfile <- function(gtf_tab_with_rel_coords, distance_3end = 30, 
     
     collapsed_lookup <- profile_clusters %>%
         dplyr::group_by(profile_group) %>%
-        dplyr::mutate(transcript_collapseds = paste0(sort(unique(transcript_name)), collapse = ",")) %>%
+        dplyr::mutate(
+            transcript_collapseds = paste0(
+                sort(unique(transcript_name)), 
+                collapse = ","
+            )
+        ) %>%
         dplyr::ungroup() %>%
         dplyr::select(transcript_name, transcript_collapseds, n_isoforms_in_profile) %>%
         dplyr::distinct()
     
     result <- gtf_tab_with_rel_coords %>%
-        dplyr::left_join(collapsed_lookup, by = "transcript_name", relationship = "many-to-one")
+        dplyr::left_join(
+            collapsed_lookup, 
+            by = "transcript_name", 
+            relationship = "many-to-one"
+        )
     
     return(result)
 }
 
 # Read input file
-base::cat("Reading input file:", args$input, "\n")
-gtf_data <- utils::read.csv(args$input, sep = "\t", header = TRUE)
+gtf_data <- fread(args$input)
 
 # Apply function
-base::cat("Processing transcripts...\n")
 result <- groupIsoformEndProfile(
     gtf_data, 
     distance_3end = args$distance_3end,
     distance_profile = args$distance_profile
 )
 
-nb.collapseds = distinct(result, transcript_collapseds, n_isoforms_in_profile) %>%
-    dplyr::filter(n_isoforms_in_profile>1) %>%
-    summarise(nb.collapseds = sum(n_isoforms_in_profile))
-
-check.stats1 = distinct(result, gene_name, transcript_collapseds, n_isoforms_in_profile) %>% 
-    as_tibble() %>%
-    summarise(
-        nb.genes = n_distinct(gene_name), 
-        nb.isoforms = sum(n_isoforms_in_profile),
-        nb.collapseds = nb.collapseds$nb.collapseds
+#write infos about the collapseds isoforms
+result %>%
+    distinct(seqnames, gene_id, gene_name, transcript_id, transcript_name, transcript_collapseds) %>%
+    fwrite(
+        file="stats.txt", 
+        sep="\t", 
+        quote = FALSE,
+        row.names = FALSE
     )
 
-stats.dat = paste0(result$seqnames[1], "\t", check.stats1$nb.genes, "\t", check.stats1$nb.isoforms, "\t", check.stats1$nb.collapseds)
-system(
-    paste0(
-        "echo ", 
-        stats.dat, 
-        " > stats.txt")
-)
-       
-    
-# stats_output <- c(
-#     # paste0("- Statistic about annotation processing - ", result$seqnames[1]),
-#     paste("Number of genes processed: ", check.stats1$nb.genes),
-#     paste("Number of isoforms before collapsing: ", check.stats1$nb.isoforms),
-#     paste("Number of collapsed isoforms: ", check.stats1$nb.collapseds)
-# )
-# writeLines(stats_output, con = "stats.txt")
+#select representative isoform in collapseds based on avgTPM score
+rep_isoforms = result %>%
+    distinct(transcript_name, transcript_collapseds, TPM_perc) %>%
+    group_by(transcript_collapseds) %>%
+    filter(TPM_perc == max(TPM_perc)) %>%
+    slice_head(n = 1)
+
+result = result %>%
+    filter(transcript_name %in% rep_isoforms$transcript_name)
 
 # Write output
-base::cat("Writing output to:", args$output, "\n")
-utils::write.table(result, file = args$output, row.names = FALSE, quote = FALSE, sep = "\t")
-base::cat("Done!\n")
+fwrite(result, file = args$output, sep = "\t")

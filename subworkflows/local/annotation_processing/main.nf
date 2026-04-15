@@ -1,9 +1,6 @@
 
 include { SALMON_INDEX }       from '../../../modules/nf-core/salmon/index/main.nf'
 include { SALMON_QUANT }       from '../../../modules/nf-core/salmon/quant/main.nf'
-// include { ISOFORM_WEIGHTING }  from '../../../modules/local/weighting/main.nf'
-// include { SPLIT_ANNOTATION; ISOFORM_SELECTION }  from '../../../modules/local/isoformselection/main.nf'
-
 
 // main workflow
 workflow ANNOTATION_PROCESSING {
@@ -34,7 +31,6 @@ workflow ANNOTATION_PROCESSING {
         'ISR')
     ch_versions = ch_versions.mix(SALMON_QUANT.out.versions)
 
-    //TPM count average
     TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING(
         SALMON_QUANT.out.results.collate(2).transpose().toList().map{ it = it[1] },
         genome_annotation)
@@ -51,7 +47,7 @@ workflow ANNOTATION_PROCESSING {
     
     // Collect all stats into a single log file
     ch_annotation_log = ISOFORM_SELECTION.out.stats
-        .collectFile(name: 'annotation_processing.log', storeDir: "${params.outdir}/pipeline_info", newLine: true)
+        .collectFile(name: 'collapsed_isoforms.log', storeDir: "${params.outdir}/pipeline_info", newLine: true)
     
     emit:
     all_transcripts = ISOFORM_SELECTION.out.full_gtf
@@ -67,17 +63,17 @@ process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
     label 'process_single'
     tag "${genome_annotation}"
 
-    conda "conda-forge::r-biocmanager=1.30.27 conda-forge::r-dplyr=1.1.4 conda-forge::r-tidyr=1.3.2"
+    conda "bioconda::bioconductor-rtracklayer=1.66.0 conda-forge::r-dplyr=1.2.0 conda-forge::r-tidyr=1.3.2"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/bioconductor-rtracklayer_r-dplyr_r-tidyr:51cab57e4da44f82' :
-        'community.wave.seqera.io/library/bioconductor-rtracklayer_r-dplyr_r-tidyr:c2b5a953efeb031b' }"
+        'oras://community.wave.seqera.io/library/bioconductor-rtracklayer_r-data.table_r-dplyr_r-tidyr:95f9946a88b84d7a' :
+        'community.wave.seqera.io/library/bioconductor-rtracklayer_r-data.table_r-dplyr_r-tidyr:60d194d659530407' }"
 
     input:
         file quant_files
-        file genome_annotation
+        path genome_annotation
 
     output:
-        path('*.bed'), emit: gtf_entries
+        path('*.tsv'), emit: gtf_entries
         path('versions.yml'), emit: versions
 
     script:
@@ -88,14 +84,20 @@ process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
     options(width=300)
 
     # - reading...
+    sf_files = list.files(
+        path = ".", 
+        pattern = "quant.sf", 
+        full.names = T, 
+        recursive=T)
+    
+    if(length(sf_files) == 0){
+        stop("No quant.sf files found in input directory [Issue with Salmon QUANT ? / input FASTA ?]")
+    }
+
     quant_data = do.call(
         rbind, 
         lapply(
-            list.files(
-                path = ".", 
-                pattern = "*.sf", 
-                full.names = T, 
-                recursive=T),
+            sf_files,
             function(x) read.table(x, sep="\\t", header=T) %>% dplyr::mutate(sample_id=x)))
     
     gtf = data.frame(
@@ -122,28 +124,53 @@ process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
     gtf = gtf %>%
         dplyr::group_by(gene_id) %>%
         dplyr::mutate(
-            TPM_perc = ifelse(
-                sum(meanTPM, na.rm = TRUE) > 0,
-                round(meanTPM / sum(meanTPM, na.rm = TRUE), 2),
-                0
-            ),
-            exon_number = ifelse(strand == "+", seq(n(), 1), 1:n())
+            TPM_perc = round(meanTPM / sum(meanTPM, na.rm = TRUE), 7),
+            width = width - 1
         ) %>%
+        dplyr::ungroup() %>%
+        arrange(seqnames,start,desc(end)) %>% 
+        dplyr::group_by(transcript_name) %>%
+        dplyr::mutate(exon_number = ifelse(strand == "+", seq(n(), 1), 1:n())) %>%
         dplyr::ungroup() %>%
         dplyr::arrange(seqnames, start, desc(end)) %>%
         dplyr::select(-meanTPM) %>%
+        dplyr::arrange(transcript_name,exon_number) %>% 
         dplyr::group_by(transcript_name) %>%
-        dplyr::mutate(
-            exon_number = ifelse(strand == "+", n():1, 1:n()),
-            exon_length = end - start
+        group_modify(
+            ~ {
+                starts = .x\$start
+                ends = .x\$end
+                startR = rep(NA,length(starts))
+                endR = rep(NA,length(ends))
+                for(i in .x\$exon_number){
+                    if(i==1){
+                        startR[i] = 0
+                        endR[i] = (ends[i] - (starts[i])) - 1
+                    } else {
+                        startR[i] = endR[i-1] + 1
+                        endR[i] = startR[i] + (ends[i] - starts[i])
+                    }
+                    .x\$startR = startR
+                    .x\$endR = endR
+                }
+                .x
+            }
         ) %>%
-        dplyr::arrange(transcript_name, exon_number) %>%
-        #calculate transcriptome relative coordinates
-        dplyr::mutate(
-            endR = cumsum(exon_length) - 1,
-            startR = lag(endR + 1, default = 0)
+        distinct(
+            seqnames,
+            start,
+            end,
+            width,
+            strand,
+            startR,
+            endR,
+            gene_id,
+            gene_name,
+            transcript_id,
+            transcript_name,
+            exon_number,
+            TPM_perc
         ) %>%
-        dplyr::select(-exon_length) %>%
         dplyr::ungroup() %>% data.frame()
 
 
@@ -151,7 +178,7 @@ process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
     dev = lapply(
         unique(gtf\$seqnames), 
         function(chr) gtf %>% subset(seqnames==chr) %>%
-             write.table(file=paste0(chr,"_tpm.bed"), 
+             write.table(file=paste0(chr,".tsv"), 
              sep="\\t", row.names=F, quote=F))
 
     # - Write versions.yml from R
@@ -165,19 +192,19 @@ process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
     """
     stub:
     """
-    touch XXX_tpm.tsv
+    touch XXX.tsv
     echo "R: stub" > versions.yml
     """
 }
 
 process ISOFORM_SELECTION{
     label 'process_single'
-    tag "${gtf_entries}"
+    tag "${gtf_entries.baseName}"
 
-    conda "conda-forge::r-argparse=2.3.1 conda-forge::r-tidyr=1.3.2 conda-forge::r-dplyr=1.1.4"
+    conda "conda-forge::r-argparse=2.3.1 conda-forge::r-tidyr=1.3.2 conda-forge::r-dplyr=1.1.4 conda-forge::r-data.table=1.17.8"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/r-argparse_r-dplyr_r-tidyr:85542ba539718d05' :
-        'community.wave.seqera.io/library/r-argparse_r-dplyr_r-tidyr:844cdec398eb87bd' }"
+        'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-tidyr:130e888376e46c19' :
+        'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-tidyr:40ad9129fa7b497b' }"
 
     input:
         file gtf_entries
@@ -186,7 +213,7 @@ process ISOFORM_SELECTION{
         val distance_profile
 
     output:
-        path "${gtf_entries.baseName}_collapsed.bed", emit: full_gtf
+        tuple val("${gtf_entries.baseName}"), path("${gtf_entries.baseName}.annots.gz"), emit: full_gtf
         path "stats.txt", emit: stats
         path('versions.yml'), emit: versions
 
@@ -194,10 +221,11 @@ process ISOFORM_SELECTION{
     """
     Rscript ${script} \
         --input ${gtf_entries} \
-        --output ${gtf_entries.baseName}_collapsed.bed \
+        --output ${gtf_entries.baseName}.annots \
         --distance_3end ${distance_3end} \
         --distance_profile ${distance_profile}
-    
+    gzip ${gtf_entries.baseName}.annots
+
 
     # Write versions.yml for R version in bash
     echo "!${task.process}:" > versions.yml
@@ -205,7 +233,7 @@ process ISOFORM_SELECTION{
     """
     stub:
     """
-    touch ${gtf_entries.baseName}_collapsed.bed
+    touch ${gtf_entries.baseName}.annots.gz
     touch stats.txt
     echo "R: stub" > versions.yml
     """

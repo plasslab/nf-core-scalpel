@@ -4,6 +4,7 @@ include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pi
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_scalpel_pipeline'
 include { ANNOTATION_PROCESSING  } from '../subworkflows/local/annotation_processing/main.nf'
 include { READS_PROCESSING       } from '../subworkflows/local/reads_processing/main.nf'
+include { ISOFORM_QUANTIFICATION } from '../subworkflows/local/isoform_quantification/main.nf'
 
 
 workflow SCALPEL {
@@ -24,7 +25,14 @@ workflow SCALPEL {
 
     READS_PROCESSING(
         ch_samplesheet,
-        ANNOTATION_PROCESSING.out.all_transcripts)
+        ANNOTATION_PROCESSING.out.all_transcripts
+    )
+
+    ISOFORM_QUANTIFICATION(
+        ch_samplesheet,
+        // group by sample_id [Index 0]
+        READS_PROCESSING.out.reads.groupTuple(by: 0)
+    )
 
     // Collate and save software versions
     softwareVersionsToYAML(ch_versions)

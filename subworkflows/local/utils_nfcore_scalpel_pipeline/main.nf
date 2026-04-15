@@ -86,6 +86,22 @@ workflow PIPELINE_INITIALISATION {
     )
 
     //
+    // Always print pipeline-specific options regardless of whether they differ from defaults
+    //
+    log.info """
+Pipeline options
+  sequencing_platform : ${params.sequencing_platform}
+  libtype             : ${params.libtype}
+  distance_profile    : ${params.distance_profile}
+  distance_3end       : ${params.distance_3end}
+  distance_ip         : ${params.distance_ip}
+  gene_fraction       : ${params.gene_fraction}
+  binsize             : ${params.binsize}
+  barcodes_whitelist  : ${params.barcodes_whitelist ?: 'not provided'}
+------------------------------------------------------
+""".stripIndent()
+
+    //
     // Check config provided to the pipeline
     //
     UTILS_NFCORE_PIPELINE (
