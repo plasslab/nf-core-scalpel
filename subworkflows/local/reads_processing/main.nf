@@ -26,7 +26,6 @@ workflow READS_PROCESSING {
 
     // Extract BAM files & defaults Barcodes tag
     if( params.sequencing_platform == 'chromium' ) {
-
         ch_samplesheet.map{ 
             meta, 
             files -> tuple(meta, [files[2]+'/outs/possorted_genome_bam.bam', 
@@ -34,9 +33,7 @@ workflow READS_PROCESSING {
         }.set{ ch_bam_files }
 
     } else if( params.sequencing_platform == 'dropseq' ) {
-
         ch_samplesheet.map{ meta, files -> tuple(meta, files[2]) }.set{ ch_bam_files }
-
     } else {
 
         log.error 

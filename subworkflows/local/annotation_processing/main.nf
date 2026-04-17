@@ -118,13 +118,15 @@ process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
         dplyr::ungroup()
 
     # - merge with gtf...
-    gtf = dplyr::left_join(gtf, quant_data, by=c("transcript_id"))
+    gtf = dplyr::left_join(gtf, quant_data, by=c("transcript_id")) %>%
+        # if transcriptID is not in quant_data, assign a very small constant to avoid 0 weigth score (meanTPM = 1e-12)
+        dplyr::mutate(meanTPM = ifelse(is.na(meanTPM), 1e-12, meanTPM))
 
     #calculate transcript bulk average TPM per gene
     gtf = gtf %>%
         dplyr::group_by(gene_id) %>%
         dplyr::mutate(
-            TPM_perc = round(meanTPM / sum(meanTPM, na.rm = TRUE), 7),
+            TPM_perc = round(meanTPM / sum(meanTPM), 12),
             width = width - 1
         ) %>%
         dplyr::ungroup() %>%

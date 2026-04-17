@@ -1,11 +1,4 @@
 #!/usr/bin/env Rscript
-#
-# reads_merging v3 — key change vs v2:
-#   - Replace GenomicRanges::findOverlaps() with data.table::foverlaps()
-#   - Eliminates GRanges/IRanges object creation entirely
-#   - foverlaps keys on (seqnames, strand, start, end) for strand-specific overlap
-#   - Produces merged table directly (no queryHits/subjectHits + cbind)
-#
 
 suppressPackageStartupMessages({
   library(argparse,   quietly = TRUE)
@@ -13,7 +6,6 @@ suppressPackageStartupMessages({
   library(dplyr,     quietly = TRUE)
   library(fst,        quietly = TRUE)
 })
-options(width = 600)
 
 parser <- ArgumentParser(description = "Merge reads with genomic annotations")
 parser$add_argument("--reads", required = TRUE, help = "Path to reads BED file")
@@ -32,7 +24,7 @@ print(args$reads)
 # 1. Read input files
 # ---------------------------------------------------------------------------
 message("step1...")
-reads <- fread(
+reads = fread(
   cmd = args$reads,
   select = c(1, 2, 3, 6, 4, 14, 15),
   col.names = c("seqnames", "start", "end", "strand", "read_id", "bc", "umi"),
@@ -45,7 +37,7 @@ reads = reads %>%
 reads[, read_id := sub("/.*", "", read_id)]
 reads[, c("nsplices", "start") := .(uniqueN(start), start + 1L), by = read_id]
 
-annotations <- fread(
+annotations = fread(
   args$annotations,
   select = c("seqnames", "start", "end", "strand",
              "startR", "endR", "gene_name", "transcript_name",
