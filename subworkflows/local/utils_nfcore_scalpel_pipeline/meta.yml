@@ -10,6 +10,9 @@ components:
   - utils_nfschema_plugin
   - utils_nfcore_pipeline
   - utils_nextflow_pipeline
+  - completionemail
+  - completionsummary
+  - imnotification
 input:
   - version:
       type: value
