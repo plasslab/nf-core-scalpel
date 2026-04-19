@@ -3,4 +3,13 @@ nf_core_version: 3.5.2
 lint:
   template_strings:
     - lint_results.txt
-    - subsample_data/
+    - subsample_data/cellranger_samples/SRR6129050/outs/molecule_info.h5
+    - subsample_data/cellranger_samples/SRR6129050/outs/cloupe.cloupe
+    - subsample_data/cellranger_samples/SRR6129050/outs/possorted_genome_bam.bam
+    - subsample_data/cellranger_samples/SRR6129050/outs/filtered_feature_bc_matrix.h5
+    - subsample_data/cellranger_samples/SRR6129050/outs/raw_feature_bc_matrix.h5
+    - subsample_data/cellranger_samples/SRR6129051/outs/molecule_info.h5
+    - subsample_data/cellranger_samples/SRR6129051/outs/cloupe.cloupe
+    - subsample_data/cellranger_samples/SRR6129051/outs/possorted_genome_bam.bam
+    - subsample_data/cellranger_samples/SRR6129051/outs/filtered_feature_bc_matrix.h5
+    - subsample_data/cellranger_samples/SRR6129051/outs/raw_feature_bc_matrix.h5
