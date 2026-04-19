@@ -1,45 +1,51 @@
-name: ISOFORM_WEIGHTING
-description: "Calculate isoform weights based on bulk RNA-seq quantifications by averaging TPM values across samples and computing relative weights per gene"
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "annotation_processing"
+description: Process genome annotation and quantify bulk RNA-seq data to select expressed isoforms for single-cell analysis
 keywords:
+  - annotation
   - isoform
-  - weighting
-  - bulk
+  - salmon
   - quantification
-  - tpm
-  - transcript
-  - gene expression
-tools:
-  - r-base:
-      description: "The R Project for Statistical Computing"
-      homepage: "https://www.r-project.org/"
-      documentation: "https://www.r-project.org/manuals.html"
-      tool_dev_url: "https://svn.r-project.org/R/"
-      licence: "GPL-2.0-or-later"
-  - r-dplyr:
-      description: "A Grammar of Data Manipulation"
-      homepage: "https://dplyr.tidyverse.org/"
-      documentation: "https://dplyr.tidyverse.org/reference/index.html"
-      tool_dev_url: "https://github.com/tidyverse/dplyr"
-      licence: "MIT"
-  - r-stringr:
-      description: "Simple, Consistent Wrappers for Common String Operations"
-      homepage: "https://stringr.tidyverse.org/"
-      documentation: "https://stringr.tidyverse.org/reference/index.html"
-      tool_dev_url: "https://github.com/tidyverse/stringr"
-      licence: "MIT"
+  - gtf
+components:
+  - salmon/index
+  - salmon/quant
 input:
-  - bulk_quants:
-      type: directory
-      description: "Directory containing bulk quantification files (quant.sf) from tools like Salmon"
-      pattern: "*/"
-output:
-  - weights:
+  - ch_samplesheet:
       type: file
-      description: "Tab-separated file containing isoform weights per gene"
-      pattern: "weights.tsv"
+      description: |
+        Samplesheet channel with sample metadata and file paths
+        Structure: [ val(meta), [ fastq_1, fastq_2, cranger_path ] ]
+  - genome_fasta:
+      type: file
+      description: |
+        Genome FASTA file
+        Structure: [ path(genome.fa) ]
+      pattern: "*.{fa,fasta,fa.gz,fasta.gz}"
+  - transcriptome_fasta:
+      type: file
+      description: |
+        Transcriptome FASTA file
+        Structure: [ path(transcriptome.fa) ]
+      pattern: "*.{fa,fasta,fa.gz,fasta.gz}"
+  - genome_annotation:
+      type: file
+      description: |
+        Genome annotation GTF file
+        Structure: [ path(annotation.gtf) ]
+      pattern: "*.gtf{,.gz}"
+output:
+  - all_transcripts:
+      type: file
+      description: |
+        Selected isoforms GTF file
+        Structure: [ path(transcripts.gtf) ]
+      pattern: "*.gtf"
   - versions:
       type: file
-      description: "File containing software versions"
+      description: |
+        File containing software versions
+        Structure: [ path(versions.yml) ]
       pattern: "versions.yml"
 authors:
   - "@Franzx7"

@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "utils_nfcore_scalpel_pipeline"
+description: Initialisation and completion tasks specific to the nf-core/scalpel pipeline
+keywords:
+  - util
+  - pipeline
+  - initialisation
+  - nf-core
+components:
+  - utils_nfschema_plugin
+  - utils_nfcore_pipeline
+  - utils_nextflow_pipeline
+input:
+  - version:
+      type: value
+      description: Boolean flag to display version and exit
+  - validate_params:
+      type: value
+      description: Boolean flag to validate parameters against schema at runtime
+  - monochrome_logs:
+      type: value
+      description: Boolean flag to disable coloured log output
+  - nextflow_cli_args:
+      type: value
+      description: List of positional Nextflow CLI arguments
+  - outdir:
+      type: value
+      description: Output directory path
+  - samplesheet:
+      type: value
+      description: Path to input samplesheet
+output:
+  - samplesheet:
+      type: channel
+      description: |
+        Validated samplesheet channel
+        Structure: [ val(meta), [ files ] ]
+  - versions:
+      type: file
+      description: |
+        File containing software versions
+        Structure: [ path(versions.yml) ]
+      pattern: "versions.yml"
+authors:
+  - "@Franzx7"
+maintainers:
+  - "@Franzx7"

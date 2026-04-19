@@ -1,7 +1,4 @@
 
-// include { BED_CONVERSION       } from '../../../modules/local/bedconversion/main.nf'
-// include { READ_MAPPING        }  from '../../../modules/local/readmapping/main.nf'
-
 workflow READS_PROCESSING {
 
     take:

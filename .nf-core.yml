@@ -1,2 +1,7 @@
 repository_type: pipeline
 nf_core_version: 3.5.2
+lint:
+  subworkflows:
+    - subworkflow_include:
+        - reads_processing
+        - isoform_quantification
