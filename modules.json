@@ -1,51 +1,51 @@
 {
-  "name": "nf-core/scalpel",
-  "homePage": "https://github.com/nf-core/scalpel",
-  "repos": {
-    "https://github.com/nf-core/modules.git": {
-      "modules": {
-        "nf-core": {
-          "salmon/index": {
-            "branch": "master",
-            "git_sha": "196cde9b19d49324c5cf10977959f5db856ebbdd",
-            "installed_by": ["modules"]
-          },
-          "salmon/quant": {
-            "branch": "master",
-            "git_sha": "9ebc300e05af07c770b86ff089581a2d41346c8b",
-            "installed_by": ["modules"]
-          },
-          "samtools/index": {
-            "branch": "master",
-            "git_sha": "156feda0cb6589cd29c04902004fa3b53bc00205",
-            "installed_by": ["modules"]
-          },
-          "samtools/view": {
-            "branch": "master",
-            "git_sha": "2057a0a8dbd67000d08613a556570aa7184a7c89",
-            "installed_by": ["modules"]
-          }
+    "name": "nf-core/scalpel",
+    "homePage": "https://github.com/nf-core/scalpel",
+    "repos": {
+        "https://github.com/nf-core/modules.git": {
+            "modules": {
+                "nf-core": {
+                    "salmon/index": {
+                        "branch": "master",
+                        "git_sha": "196cde9b19d49324c5cf10977959f5db856ebbdd",
+                        "installed_by": ["modules"]
+                    },
+                    "salmon/quant": {
+                        "branch": "master",
+                        "git_sha": "9ebc300e05af07c770b86ff089581a2d41346c8b",
+                        "installed_by": ["modules"]
+                    },
+                    "samtools/index": {
+                        "branch": "master",
+                        "git_sha": "156feda0cb6589cd29c04902004fa3b53bc00205",
+                        "installed_by": ["modules"]
+                    },
+                    "samtools/view": {
+                        "branch": "master",
+                        "git_sha": "2057a0a8dbd67000d08613a556570aa7184a7c89",
+                        "installed_by": ["modules"]
+                    }
+                }
+            },
+            "subworkflows": {
+                "nf-core": {
+                    "utils_nextflow_pipeline": {
+                        "branch": "master",
+                        "git_sha": "05954dab2ff481bcb999f24455da29a5828af08d",
+                        "installed_by": ["subworkflows"]
+                    },
+                    "utils_nfcore_pipeline": {
+                        "branch": "master",
+                        "git_sha": "f0b535b3ae20080f8db03dd5388876ad1ec29d70",
+                        "installed_by": ["subworkflows"]
+                    },
+                    "utils_nfschema_plugin": {
+                        "branch": "master",
+                        "git_sha": "fdc08b8b1ae74f56686ce21f7ea11ad11990ce57",
+                        "installed_by": ["subworkflows"]
+                    }
+                }
+            }
         }
-      },
-      "subworkflows": {
-        "nf-core": {
-          "utils_nextflow_pipeline": {
-            "branch": "master",
-            "git_sha": "05954dab2ff481bcb999f24455da29a5828af08d",
-            "installed_by": ["subworkflows"]
-          },
-          "utils_nfcore_pipeline": {
-            "branch": "master",
-            "git_sha": "f0b535b3ae20080f8db03dd5388876ad1ec29d70",
-            "installed_by": ["subworkflows"]
-          },
-          "utils_nfschema_plugin": {
-            "branch": "master",
-            "git_sha": "fdc08b8b1ae74f56686ce21f7ea11ad11990ce57",
-            "installed_by": ["subworkflows"]
-          }
-        }
-      }
     }
-  }
 }
