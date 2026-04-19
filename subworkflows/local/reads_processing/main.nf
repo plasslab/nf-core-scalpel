@@ -36,12 +36,7 @@ workflow READS_PROCESSING {
         ch_samplesheet.map{ meta, files -> tuple(meta, files[2]) }.set{ ch_bam_files }
     } else {
 
-        log.error 
-        """
-            Unsupported sequencing platform: ${params.sequencing_platform}. 
-            Supported platforms are: 'chromium' and 'dropseq'.
-        """
-        System.exit(1)
+        error("Unsupported sequencing platform: ${params.sequencing_platform}. Supported platforms are: 'chromium' and 'dropseq'.")
 
     }
 

@@ -1,11 +1,11 @@
 process SALMON_INDEX {
     tag "$transcript_fasta"
-    label "process_high"
+    label "process_medium"
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/salmon:1.10.3--h6dccd9a_2' :
-        'community.wave.seqera.io/library/salmon:1.10.3--dc33937abc5bffd1' }"
+        'biocontainers/salmon:1.10.3--h6dccd9a_2' }"
 
     input:
     path genome_fasta
@@ -13,7 +13,7 @@ process SALMON_INDEX {
 
     output:
     path "salmon"      , emit: index
-    path "versions.yml", emit: versions
+    tuple val("${task.process}"), val('salmon'), eval("salmon --version | sed 's/salmon //'"), emit: versions_salmon, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -44,13 +44,7 @@ process SALMON_INDEX {
         -t $fasta \\
         $decoys \\
         $args \\
-        --keepDuplicates \\
         -i salmon
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        salmon: \$(echo \$(salmon --version) | sed -e "s/salmon //g")
-    END_VERSIONS
     """
 
     stub:
@@ -71,10 +65,5 @@ process SALMON_INDEX {
     touch salmon/refseq.bin
     touch salmon/seq.bin
     touch salmon/versionInfo.json
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        salmon: \$(echo \$(salmon --version) | sed -e "s/salmon //g")
-    END_VERSIONS
     """
 }

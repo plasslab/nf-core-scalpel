@@ -1,0 +1,33 @@
+name: nf-core AWS test
+# This workflow is triggered on published releases.
+# It can be additionally triggered manually with GitHub Actions workflow dispatch.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+jobs:
+  run-tower:
+    name: Run AWS tests
+    if: github.repository == 'nf-core/scalpel'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Launch workflow via Seqera Platform
+        uses: seqeralabs/action-tower-launch@v2
+        with:
+          workspace_id: ${{ secrets.TOWER_WORKSPACE_ID }}
+          access_token: ${{ secrets.TOWER_ACCESS_TOKEN }}
+          compute_env: ${{ secrets.TOWER_COMPUTE_ENV }}
+          revision: ${{ github.sha }}
+          workdir: s3://${{ secrets.AWS_S3_BUCKET }}/work/${{ github.sha }}
+          parameters: |
+            {
+              "outdir": "s3://${{ secrets.AWS_S3_BUCKET }}/results/${{ github.sha }}"
+            }
+          profiles: test
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Tower debug log file
+          path: |
+            tower_action_*.log
+            tower_action_*.json

@@ -7,22 +7,22 @@
         "nf-core": {
           "salmon/index": {
             "branch": "master",
-            "git_sha": "0a5bbb661ec55016260699a338c533adde62f5e6",
+            "git_sha": "196cde9b19d49324c5cf10977959f5db856ebbdd",
             "installed_by": ["modules"]
           },
           "salmon/quant": {
             "branch": "master",
-            "git_sha": "41dfa3f7c0ffabb96a6a813fe321c6d1cc5b6e46",
+            "git_sha": "9ebc300e05af07c770b86ff089581a2d41346c8b",
             "installed_by": ["modules"]
           },
           "samtools/index": {
             "branch": "master",
-            "git_sha": "c8be52dba1166c678e74cda9c3a3c221635c8bb1",
+            "git_sha": "156feda0cb6589cd29c04902004fa3b53bc00205",
             "installed_by": ["modules"]
           },
           "samtools/view": {
             "branch": "master",
-            "git_sha": "c8be52dba1166c678e74cda9c3a3c221635c8bb1",
+            "git_sha": "2057a0a8dbd67000d08613a556570aa7184a7c89",
             "installed_by": ["modules"]
           }
         }
