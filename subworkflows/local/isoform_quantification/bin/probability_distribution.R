@@ -63,7 +63,7 @@ colnames(read_tab) = c("transcriptomic_distance", "counts")
 
 #let's set interval axis (anchored at 0, robust to one-sided distances #34)
 if(nrow(read_tab) == 0){
-  stop("No reads left for the probability distribution (single-isoform genes after gene_fraction filtering). Check that annotation & reads chromosome names match.")
+  stop("No reads left for the probability distribution: it is learned from genes with a single selected isoform, and none has reads after filtering (gene_fraction). Check that annotation & reads chromosome names match, and that the sample has enough expressed genes.")
 }
 DIST_MIN = min(read_tab$transcriptomic_distance)
 DIST_MAX = max(read_tab$transcriptomic_distance)
