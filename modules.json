@@ -17,7 +17,7 @@
                     },
                     "samtools/index": {
                         "branch": "master",
-                        "git_sha": "156feda0cb6589cd29c04902004fa3b53bc00205",
+                        "git_sha": "a582d5633f7df32396681ef4458068e2b509ca91",
                         "installed_by": ["modules"]
                     }
                 }
@@ -26,12 +26,12 @@
                 "nf-core": {
                     "utils_nextflow_pipeline": {
                         "branch": "master",
-                        "git_sha": "05954dab2ff481bcb999f24455da29a5828af08d",
+                        "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
                         "installed_by": ["subworkflows"]
                     },
                     "utils_nfcore_pipeline": {
                         "branch": "master",
-                        "git_sha": "f0b535b3ae20080f8db03dd5388876ad1ec29d70",
+                        "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
                         "installed_by": ["subworkflows"]
                     },
                     "utils_nfschema_plugin": {

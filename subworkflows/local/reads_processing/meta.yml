@@ -7,8 +7,13 @@ keywords:
   - sam
   - cram
 components:
-  - samtools/sort
   - samtools/index
+  - dge/barcodes
+  - seqnames/check
+  - ip/splitting
+  - bed/conversion
+  - reads/mapping/and/filtering
+  - ip/filtering
 input:
   - ch_bam:
       type: file

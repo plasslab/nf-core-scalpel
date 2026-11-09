@@ -7,8 +7,11 @@ keywords:
   - sam
   - cram
 components:
-  - samtools/sort
-  - samtools/index
+  - probability/distribution
+  - fragment/probability
+  - cell/data/generation
+  - em/algorithm
+  - dge/generation
 input:
   - ch_bam:
       type: file

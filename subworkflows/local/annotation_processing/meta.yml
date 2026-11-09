@@ -10,6 +10,8 @@ keywords:
 components:
   - salmon/index
   - salmon/quant
+  - transcript/tpm/count/average/and/weigthing
+  - isoform/selection
 input:
   - ch_samplesheet:
       type: file

@@ -7,8 +7,8 @@ keywords:
   - sam
   - cram
 components:
-  - samtools/sort
-  - samtools/index
+  - differential/isoform/usage
+  - filtered/bams
 input:
   - ch_bam:
       type: file
