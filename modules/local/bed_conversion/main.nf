@@ -8,7 +8,7 @@ process BED_CONVERSION {
         'community.wave.seqera.io/library/samtools:1.25--a253eb9139fd1fcd' }"
 
     input:
-        tuple val(meta), val(bam_file), val(bai_file), path(barcodes_file), val(annotated_seqname)
+        tuple val(meta), path(bam_file), path(bai_file), path(barcodes_file), val(annotated_seqname)
         val sequencing_platform
 
     output:

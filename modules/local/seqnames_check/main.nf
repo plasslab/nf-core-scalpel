@@ -8,12 +8,12 @@ process SEQNAMES_CHECK {
         'community.wave.seqera.io/library/samtools:1.25--a253eb9139fd1fcd' }"
 
     input:
-        tuple val(meta), val(bam_file), val(bai_file), path(barcodes_file)
+        tuple val(meta), path(bam_file), path(bai_file), path(barcodes_file)
         val(annotated_seqnames)
         val(barcode_tag)
 
     output:
-        tuple val(meta), val(bam_file), val(bai_file), path(barcodes_file), emit: checked_bams
+        tuple val(meta), path(bam_file, includeInputs: true), path(bai_file, includeInputs: true), path(barcodes_file, includeInputs: true), emit: checked_bams
         path('versions.yml'), emit: versions
 
     script:

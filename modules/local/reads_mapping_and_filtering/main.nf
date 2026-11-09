@@ -8,7 +8,7 @@ process READS_MAPPING_AND_FILTERING {
         'community.wave.seqera.io/library/r-base_r-argparse_r-dplyr_r-data.table_pruned:9e005428b384d2ec' }"
 
     input:
-        tuple val(meta), val(seqname), path(annots), val(reads)
+        tuple val(meta), val(seqname), path(annots), path(reads)
         path(script)
         val(distance_thr)
     

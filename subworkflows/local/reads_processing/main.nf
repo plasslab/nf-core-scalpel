@@ -86,8 +86,10 @@ workflow READS_PROCESSING {
     }.join(
         SAMTOOLS_INDEX.out.index.map{ meta, bai -> tuple(meta.id, bai) }
     ).map{
-        sample_id, meta, bam, barcodes, bai -> tuple(meta, bam, bai.toString(), barcodes)
-    }.mix(ch_bam_with_barcodes.indexed).set{ ch_indexed_bams }
+        sample_id, meta, bam, barcodes, bai -> tuple(meta, bam, bai, barcodes)
+    }.mix(ch_bam_with_barcodes.indexed).map{
+        meta, bam, bai, barcodes -> tuple(meta, file(bam), file(bai), barcodes)
+    }.set{ ch_indexed_bams }
 
     // Check chromosome names (BAM vs annotation) & barcode tags before processing (#20, #26, #36)
     SEQNAMES_CHECK(

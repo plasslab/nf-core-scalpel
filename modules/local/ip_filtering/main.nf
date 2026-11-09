@@ -8,7 +8,7 @@ process IP_FILTERING {
         'community.wave.seqera.io/library/r-base_r-argparse_r-dplyr_r-data.table_pruned:122f7e640136e794' }"
 
     input:
-        tuple val(meta), val(seqname), val(mapped_reads), path(ip_reference)
+        tuple val(meta), val(seqname), path(mapped_reads), path(ip_reference)
         path(script)
         val(distance_threshold)
 

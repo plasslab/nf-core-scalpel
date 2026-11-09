@@ -8,7 +8,7 @@ process CELL_DATA_GENERATION {
         'community.wave.seqera.io/library/r-base_r-data.table_r-dplyr_r-fst:7d28f8f9dc2b7888' }"
 
     input:
-        tuple val(meta), file(isoform_probabilities)
+        tuple val(meta), path(isoform_probabilities)
 
     output:
         tuple val("${meta}"), path("*.fst"), emit: cell_isoform_probabilities
