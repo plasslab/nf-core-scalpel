@@ -61,24 +61,32 @@ read_tab = distinct(reads, start.rdR, read_start, read_end) %>%
   data.table()
 colnames(read_tab) = c("transcriptomic_distance", "counts")
 
-#let's set interval axis
-part_neg = c(
-  seq(0,read_tab$transcriptomic_distance[1],-BINS),
-  read_tab$transcriptomic_distance[1]
-) %>%
-unique() %>% 
-rev()
-part_pos = c(
-  seq(0, max(read_tab$transcriptomic_distance), BINS), 
-  max(read_tab$transcriptomic_distance)
-) %>% 
-unique()
-intervals = unique(c(part_neg,part_pos))
+#let's set interval axis (anchored at 0, robust to one-sided distances #34)
+if(nrow(read_tab) == 0){
+  stop("No reads left for the probability distribution (single-isoform genes after gene_fraction filtering). Check that annotation & reads chromosome names match.")
+}
+DIST_MIN = min(read_tab$transcriptomic_distance)
+DIST_MAX = max(read_tab$transcriptomic_distance)
+part_neg = c()
+if(DIST_MIN < 0){
+  part_neg = c(seq(0, DIST_MIN, -BINS), DIST_MIN) %>%
+    unique() %>%
+    rev()
+}
+part_pos = c()
+if(DIST_MAX > 0){
+  part_pos = c(seq(0, DIST_MAX, BINS), DIST_MAX) %>%
+    unique()
+}
+intervals = unique(c(part_neg, 0, part_pos))
+if(length(intervals) < 2){
+  intervals = c(0, BINS)
+}
 
 intervals_counts = list()
 intervals_idx = list()
 intervals_probs = list()
-for(i in 1:(length(intervals)-1)){
+for(i in seq_len(length(intervals)-1)){
   left_born = intervals[i]
   right_born = intervals[i+1]
   #index
