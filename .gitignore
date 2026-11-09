@@ -7,3 +7,7 @@ testing/
 testing*
 *.pyc
 null/
+tests/.env/
+tests/results/
+test.html
+test_files/

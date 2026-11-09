@@ -1,0 +1,316 @@
+---
+title: "nf-core/scalpel — pipeline tests"
+subtitle: "Light end-to-end run + regression tests of plasslab/SCALPEL issues"
+author: "Franz AKE"
+date: today
+format:
+  html:
+    toc: true
+    embed-resources: true
+    code-fold: show
+execute:
+  echo: true
+  warning: false
+params:
+  run_pipeline: true      # run the light end-to-end test (-profile test,conda)
+  resume: true            # use nextflow -resume
+  regenerate_data: false  # rebuild tests/data/light from subsample_data/
+---
+
+```{r setup}
+#| include: false
+suppressPackageStartupMessages(library(data.table, quietly = TRUE))
+suppressPackageStartupMessages(library(Matrix, quietly = TRUE))
+knitr::opts_knit$set(root.dir = normalizePath("."))
+```
+
+# Setup
+
+The pipeline R scripts are run with a dedicated test conda environment
+(`tests/.env`, created once), so the R used to render this document only needs
+`knitr`, `rmarkdown`, `data.table` & `Matrix`.
+
+```{r environment}
+PROJECT_DIR = normalizePath(".")
+BIN_RP = file.path(PROJECT_DIR, "subworkflows/local/reads_processing/bin")
+BIN_IQ = file.path(PROJECT_DIR, "subworkflows/local/isoform_quantification/bin")
+ENV_DIR = file.path(PROJECT_DIR, "tests/.env")
+OUTDIR = file.path(PROJECT_DIR, "tests/results")
+TMP = file.path(tempdir(), "scalpel_tests")
+dir.create(TMP, showWarnings = FALSE, recursive = TRUE)
+
+#- tools...
+stopifnot(nzchar(Sys.which("nextflow")), nzchar(Sys.which("conda")))
+message("nextflow: ", system("nextflow -version 2>&1 | grep -o 'version [0-9.]*'", intern = TRUE))
+
+#- test conda environment (R packages used by the pipeline scripts)...
+if(!dir.exists(ENV_DIR)){
+  message("Creating test conda environment (first run only)...")
+  status = system2("conda", c(
+    "create", "-y", "-q", "-p", ENV_DIR, "--override-channels", "-c", "conda-forge", "-c", "bioconda",
+    "r-base=4.4.3", "r-argparse=2.3.1", "r-data.table=1.17.8", "r-dplyr=1.1.4", "r-fst=0.9.8",
+    "r-tidyr=1.3.2", "r-ggplot2=3.5.1", "r-scales=1.3.0", "r-matrix=1.7_6", "r-r.utils=2.13.0",
+    "r-stringr=1.5.1"
+  ))
+  stopifnot(status == 0)
+}
+RSCRIPT = file.path(ENV_DIR, "bin/Rscript")
+
+#- helpers...
+run_rscript = function(args, log_file){
+  status = system2(RSCRIPT, args, stdout = log_file, stderr = log_file)
+  return(status)
+}
+dt_to_fst = function(dt, path){
+  tmp = tempfile(fileext = ".tsv")
+  fwrite(dt, tmp, sep = "\t")
+  system2(RSCRIPT, c("-e", shQuote(sprintf(
+    "fst::write_fst(data.table::fread('%s', sep = '\\t'), '%s')", tmp, path))))
+}
+fst_to_dt = function(path){
+  tmp = tempfile(fileext = ".tsv")
+  system2(RSCRIPT, c("-e", shQuote(sprintf(
+    "data.table::fwrite(fst::read_fst('%s'), '%s', sep = '\\t')", path, tmp))))
+  return(fread(tmp, sep = "\t"))
+}
+
+#- checks registry...
+CHECKS = list()
+check = function(id, description, condition){
+  CHECKS[[length(CHECKS) + 1]] <<- data.table(id = id, check = description, pass = isTRUE(condition))
+  if(!isTRUE(condition)) warning("FAILED: [", id, "] ", description)
+  invisible(isTRUE(condition))
+}
+```
+
+```{bash test-data}
+#| eval: !expr params$regenerate_data
+bash tests/data/make_test_data.sh subsample_data tests/data/light
+```
+
+# End-to-end run (light dataset)
+
+Light dataset: GSE104556 (2 samples), restricted to `chr17:14-16Mb`
+(`tests/data/make_test_data.sh`).
+
+```{r pipeline-run}
+#| eval: !expr params$run_pipeline
+PIPELINE_LOG = file.path(TMP, "pipeline.log")
+start_time = Sys.time()
+status = system2(
+  "nextflow",
+  c("run", PROJECT_DIR, "-profile", "test,conda", "--outdir", OUTDIR, if(params$resume) "-resume"),
+  stdout = PIPELINE_LOG, stderr = PIPELINE_LOG,
+  env = "NXF_ANSI_LOG=false"
+)
+message("Duration: ", format(round(difftime(Sys.time(), start_time, units = "mins"), 2)))
+check("run", "pipeline (-profile test,conda) completes with exit status 0", status == 0)
+if(status != 0) cat(tail(readLines(PIPELINE_LOG), 40), sep = "\n")
+```
+
+## Outputs
+
+```{r pipeline-outputs}
+SAMPLES = fread("tests/data/light/samplesheet.csv")$sample
+
+for(s in SAMPLES){
+  #- probability distribution...
+  prob_file = file.path(OUTDIR, "probability", paste0(s, ".prob"))
+  check("output", paste0(s, ": probability distribution written"), file.exists(prob_file))
+  if(file.exists(prob_file)){
+    prob = fread(prob_file, col.names = c("transcriptomic_distance", "counts", "probs_bin"))
+    check("output", paste0(s, ": probabilities sum to 100"), abs(sum(prob$probs_bin) - 100) < 1e-6)
+  }
+  #- EM results...
+  check("output", paste0(s, ": EM results written"),
+    length(list.files(file.path(OUTDIR, "em"), pattern = paste0("^", s, ".*_em_results.fst$"))) > 0)
+
+  #- iDGE (sparse 10x format)...
+  idge_dir = file.path(OUTDIR, "dge", paste0(s, "_iDGE"))
+  check("output", paste0(s, ": iDGE directory (10x format) written"),
+    all(file.exists(file.path(idge_dir, c("matrix.mtx.gz", "features.tsv.gz", "barcodes.tsv.gz")))))
+  if(dir.exists(idge_dir)){
+    idge = readMM(file.path(idge_dir, "matrix.mtx.gz"))
+    features = fread(file.path(idge_dir, "features.tsv.gz"), header = FALSE)$V1
+    barcodes = fread(file.path(idge_dir, "barcodes.tsv.gz"), header = FALSE)$V1
+    message(s, " iDGE: ", nrow(idge), " isoforms x ", ncol(idge), " cells, total counts ", round(sum(idge), 2))
+    check("output", paste0(s, ": iDGE non-empty, dimensions match features/barcodes"),
+      nrow(idge) > 0 & ncol(idge) > 0 & nrow(idge) == length(features) & ncol(idge) == length(barcodes))
+    check("output", paste0(s, ": iDGE counts finite & non-negative"), all(is.finite(idge@x)) & all(idge@x >= 0))
+    check("output", paste0(s, ": iDGE features are gene***transcript"), all(grepl("\\*\\*\\*", features)))
+  }
+}
+```
+
+# Regression tests (plasslab/SCALPEL issues)
+
+## #34 — `compute_prob.R` with one-sided distances
+
+Synthetic single-isoform genes whose transcriptomic distances are all positive
+(the case that crashed with `wrong sign in 'by' argument`), then mixed signs.
+
+```{r issue-34}
+set.seed(34)
+for(scenario in c("positive_only", "mixed_signs")){
+  repo = file.path(TMP, paste0("issue34_", scenario))
+  dir.create(repo, showWarnings = FALSE)
+  #- 20 single-isoform genes, 5-60 reads each...
+  reads = rbindlist(lapply(1:20, function(g){
+    nb_reads = sample(5:60, 1)
+    data.table(
+      seqnames = "chr1", read_start = g * 1e4 + seq_len(nb_reads) * 10, strand = "+",
+      tags = paste0("BC", seq_len(nb_reads), "::UMI", g),
+      gene_name = paste0("G", g), transcript_name = paste0("G", g, "-201"),
+      start.rdR = if(scenario == "positive_only") sample(15:450, nb_reads, TRUE) else sample(-80:450, nb_reads, TRUE)
+    )
+  }))
+  reads$read_end = reads$read_start + 90
+  dt_to_fst(reads, file.path(repo, "S1_chr1.ip_filtered.fst"))
+  status = run_rscript(c(
+    file.path(BIN_IQ, "compute_prob.R"), "--repo", repo, "--gene_frac", "98%", "--bins", "20",
+    "--threads", "1", "--OUTPUT_PROB", file.path(repo, "S1.prob"), "--OUTPUT_PDF", file.path(repo, "S1.pdf")
+  ), file.path(repo, "log.txt"))
+  check("#34", paste0("compute_prob.R succeeds (", scenario, ")"), status == 0)
+  if(status == 0){
+    prob = fread(file.path(repo, "S1.prob"), col.names = c("transcriptomic_distance", "counts", "probs_bin"))
+    check("#34", paste0("probabilities sum to 100 (", scenario, ")"), abs(sum(prob$probs_bin) - 100) < 1e-6)
+    check("#34", paste0("distance axis covers observed reads (", scenario, ")"),
+      min(prob$transcriptomic_distance) <= min(reads$start.rdR) & max(prob$transcriptomic_distance) >= max(reads$start.rdR) - 1)
+  } else {
+    cat(readLines(file.path(repo, "log.txt")), sep = "\n")
+  }
+}
+```
+
+## #37 — reads filters #a and #c (original strict behaviour)
+
+Three fragments on the `+` strand, two genes (`G1`: isoforms `TA`, `TB`; `G2`: `TC`):
+
+| fragment | reads | expected |
+|---|---|---|
+| `bc1::u1` | in `TA` only + in `TA`&`TB` | keep `TA`, drop `TB` (filter c) |
+| `bc2::u2` | in `TA` only + in `TC` only | drop all — no transcript has all reads (filter c) |
+| `bc3::u3` | in `TA`&`TB` + intergenic | drop all (filter a) |
+
+```{r issue-37}
+repo = file.path(TMP, "issue37")
+dir.create(repo, showWarnings = FALSE)
+
+#- annotation (exon 1 = 3' most exon)...
+annots = data.table(
+  seqnames = "chr1", start = c(1000, 1500, 3000), end = c(2000, 2000, 4000), strand = "+",
+  startR = 0, endR = c(1000, 500, 1000),
+  gene_name = c("G1", "G1", "G2"), transcript_name = c("TA", "TB", "TC"),
+  exon_number = 1L, TPM_perc = c(0.5, 0.5, 1)
+)
+fwrite(annots, file.path(repo, "annots.tsv"), sep = "\t")
+
+#- reads (bam2bed --split layout: tags in columns 14-15)...
+reads = data.table(
+  V1 = "chr1",
+  V2 = c(1100, 1800, 1100, 3100, 1800, 6000),
+  V3 = c(1200, 1900, 1200, 3200, 1900, 6100),
+  V4 = paste0("r", 1:6), V5 = 255, V6 = "+"
+)
+for(i in 7:13) reads[[paste0("V", i)]] = "."
+reads$V14 = paste0("CB:Z:", c("bc1", "bc1", "bc2", "bc2", "bc3", "bc3"))
+reads$V15 = paste0("UB:Z:", c("u1", "u1", "u2", "u2", "u3", "u3"))
+fwrite(reads, file.path(repo, "reads.bed"), sep = "\t", col.names = FALSE)
+
+status = run_rscript(c(
+  file.path(BIN_RP, "reads_merging_v3.R"), "--reads", file.path(repo, "reads.bed"),
+  "--annotations", file.path(repo, "annots.tsv"), "--output", file.path(repo, "out.fst"),
+  "--distance_threshold", "5000"
+), file.path(repo, "log.txt"))
+check("#37", "reads_merging_v3.R succeeds", status == 0)
+
+if(status == 0){
+  kept = unique(fst_to_dt(file.path(repo, "out.fst"))[, .(tags, transcript_name)])
+  kept$pair = paste(kept$tags, kept$transcript_name)
+  print(kept)
+  check("#37", "bc1::u1 — TA kept (covers all reads)", "CB:Z:bc1::UB:Z:u1 TA" %in% kept$pair)
+  check("#37", "bc1::u1 — TB dropped (misses one read, filter c)", !("CB:Z:bc1::UB:Z:u1 TB" %in% kept$pair))
+  check("#37", "bc2::u2 — dropped (no transcript has all reads, filter c)", !any(grepl("bc2", kept$tags)))
+  check("#37", "bc3::u3 — dropped (intergenic read, filter a)", !any(grepl("bc3", kept$tags)))
+} else {
+  cat(readLines(file.path(repo, "log.txt")), sep = "\n")
+}
+```
+
+## #38 / #28 — iDGE beyond R's integer limit
+
+50,000 cells x 50,000 isoforms (dense: 2.5e9 entries > `.Machine$integer.max`),
+very sparse so the test stays fast. The former `pivot_wider` overflowed on such shapes.
+
+```{r issue-38}
+repo = file.path(TMP, "issue38")
+dir.create(file.path(repo, "dge"), showWarnings = FALSE, recursive = TRUE)
+N_CELLS = 50000
+N_GENES = 25000
+set.seed(38)
+
+#- DGE: one expressed gene per cell...
+bcs = sprintf("CELL%06d-1", 1:N_CELLS)
+genes = sprintf("G%05d", 1:N_GENES)
+gene_idx = sample.int(N_GENES, N_CELLS, replace = TRUE)
+counts = rpois(N_CELLS, 4) + 1
+writeMM(sparseMatrix(i = gene_idx, j = 1:N_CELLS, x = counts, dims = c(N_GENES, N_CELLS)), file.path(repo, "dge/matrix.mtx"))
+R.utils::gzip(file.path(repo, "dge/matrix.mtx"), overwrite = TRUE)
+fwrite(data.table(genes, genes, "Gene Expression"), file.path(repo, "dge/features.tsv.gz"), sep = "\t", col.names = FALSE)
+fwrite(data.table(bcs), file.path(repo, "dge/barcodes.tsv.gz"), col.names = FALSE)
+
+#- EM predictions: 2 isoforms for every gene (50,000 isoforms in total)...
+preds = data.table(bc_gene = rep(1:N_CELLS, each = 2), bc = rep(bcs, each = 2), gene_name = rep(genes[gene_idx], each = 2))
+preds$transcript_name = paste0(preds$gene_name, rep(c("-201", "-202"), N_CELLS))
+preds$rel_abund = rep(c(0.7, 0.3), N_CELLS)
+extra = data.table(bc_gene = 0L, bc = bcs[1], gene_name = genes, rel_abund = 0)
+extra = rbind(copy(extra)[, transcript_name := paste0(gene_name, "-201")], copy(extra)[, transcript_name := paste0(gene_name, "-202")])
+preds = rbind(preds, extra[, names(preds), with = FALSE])
+dt_to_fst(preds, file.path(repo, "S1_em_results.fst"))
+message("dense size: ", format(N_CELLS * uniqueN(preds$transcript_name), big.mark = ","),
+  " (> integer max: ", N_CELLS * uniqueN(preds$transcript_name) > .Machine$integer.max, ")")
+
+start_time = Sys.time()
+status = run_rscript(c(
+  file.path(BIN_IQ, "generate_DGE.R"), "--dge", file.path(repo, "dge"), "--pred", repo,
+  "--output", file.path(repo, "S1_iDGE")
+), file.path(repo, "log.txt"))
+message("generate_DGE.R: ", format(round(difftime(Sys.time(), start_time, units = "secs"), 1)))
+check("#38", "generate_DGE.R succeeds beyond the integer limit", status == 0)
+
+if(status == 0){
+  idge = readMM(file.path(repo, "S1_iDGE/matrix.mtx.gz"))
+  check("#38", "iDGE dimensions = 50,000 isoforms x 50,000 cells", all(dim(idge) == c(2 * N_GENES, N_CELLS)))
+  check("#38", "iDGE total = sum(rel_abund x gene counts)", abs(sum(idge) - sum(counts)) < 1e-6)
+} else {
+  cat(readLines(file.path(repo, "log.txt")), sep = "\n")
+}
+```
+
+## #29 — samplesheet paths are checked early
+
+A missing file must stop the run immediately with an explicit message
+(instead of silently skipping processes).
+
+```{r issue-29}
+bad_sheet = file.path(TMP, "bad_samplesheet.csv")
+fwrite(data.table(
+  sample = "S1", fastq_1 = "missing_R1.fastq.gz", fastq_2 = "missing_R2.fastq.gz", cranger_path = "missing_dir"
+), bad_sheet)
+log_file = file.path(TMP, "bad_samplesheet.log")
+status = system2(
+  "nextflow",
+  c("run", PROJECT_DIR, "-profile", "test,conda", "--outdir", file.path(TMP, "bad_out"), "--samplesheet", bad_sheet),
+  stdout = log_file, stderr = log_file, env = "NXF_ANSI_LOG=false"
+)
+check("#29", "run fails on missing samplesheet file", status != 0)
+check("#29", "explicit 'Samplesheet error' message", any(grepl("Samplesheet error", readLines(log_file))))
+```
+
+# Summary
+
+```{r summary}
+CHECKS = rbindlist(CHECKS)
+knitr::kable(CHECKS[, .(issue = id, check, result = ifelse(pass, "PASS", "FAIL"))])
+message(sum(CHECKS$pass), "/", nrow(CHECKS), " checks passed")
+```
