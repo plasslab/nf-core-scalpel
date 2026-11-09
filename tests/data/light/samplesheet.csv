@@ -1,0 +1,3 @@
+sample,fastq_1,fastq_2,cranger_path
+SRR6129050,reads/SRR6129050_R1.fastq.gz,reads/SRR6129050_R2.fastq.gz,cellranger/SRR6129050
+SRR6129051,reads/SRR6129051_R1.fastq.gz,reads/SRR6129051_R2.fastq.gz,cellranger/SRR6129051
