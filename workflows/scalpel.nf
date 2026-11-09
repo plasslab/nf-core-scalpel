@@ -34,15 +34,15 @@ workflow SCALPEL {
         READS_PROCESSING.out.reads.groupTuple(by: 0)
     )
 
-    // // Collate and save software versions
-    // softwareVersionsToYAML(ch_versions)
-    //     .collectFile(
-    //         storeDir: "${params.outdir}/pipeline_info",
-    //         name: 'nf_core_'  +  'scalpel_software_'  + 'versions.yml',
-    //         sort: true,
-    //         newLine: true
-    //     )
+    // Collate and save software versions
+    softwareVersionsToYAML(ch_versions)
+        .collectFile(
+            storeDir: "${params.outdir}/pipeline_info",
+            name: 'nf_core_'  +  'scalpel_software_'  + 'versions.yml',
+            sort: true,
+            newLine: true
+        )
 
-    // emit:
-    // versions = ch_versions
+    emit:
+    versions = ch_versions
 }

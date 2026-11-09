@@ -51,21 +51,23 @@ workflow ISOFORM_QUANTIFICATION {
     ch_versions = ch_versions.mix(EM_ALGORITHM.out.versions)
 
     // Extract DGE count matrix for each sample
-    // ch_samplesheet.map{ meta, files -> tuple(meta.id, files[2]) }.join(
-    //     EM_ALGORITHM.out.em_results.groupTuple(by: 0)
-    // ).map{
-    //     sample_id, sample_dge_path, em_results -> tuple(sample_id, file(sample_dge_path + "/outs/filtered_feature_bc_matrix/"), em_results)
-    // }.set{ dge_inputs }
+    ch_samplesheet.map{ meta, files -> tuple(meta.id, files[2]) }.join(
+        EM_ALGORITHM.out.em_results.groupTuple(by: 0)
+    ).map{
+        sample_id, sample_dge_path, em_results -> tuple(sample_id, file(sample_dge_path + "/outs/filtered_feature_bc_matrix/"), em_results)
+    }.set{ dge_inputs }
 
-    // // Generate DGE matrix for each sample
-    // DGE_GENERATION(
-    //     dge_inputs,
-    //     file("${workflow.projectDir}/subworkflows/local/isoform_quantification/bin/generate_DGE.R")
-    // )
+    // Generate isoform DGE matrix (sparse, 10x format) for each sample
+    DGE_GENERATION(
+        dge_inputs,
+        file("${workflow.projectDir}/subworkflows/local/isoform_quantification/bin/generate_DGE.R")
+    )
+    ch_versions = ch_versions.mix(DGE_GENERATION.out.versions)
 
-    // emit:
-    // versions = ch_versions                     // channel: [ versions.yml ]
-    
+    emit:
+    idge = DGE_GENERATION.out.dge_matrices    // channel: [ val(meta), path(iDGE dir) ]
+    versions = ch_versions                     // channel: [ versions.yml ]
+
 }
 
 
@@ -232,17 +234,17 @@ process DGE_GENERATION {
     label 'process_single'
     tag "${meta}"
 
-    conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8"
+    conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8 conda-forge::r-matrix=1.7_6 conda-forge::r-r.utils=2.13.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:8f91f8e3b3c44c32' :
         'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:9feb5ef5dc170dba' }"
 
     input:
-        tuple val(meta), file(sample_dge_path), path(em_results)
+        tuple val(meta), path(sample_dge_path), path(em_results)
         path(script)
 
     output:
-        tuple val("${meta}"), path("${meta}_dge_matrix.txt"), emit: dge_matrices
+        tuple val("${meta}"), path("${meta}_iDGE"), emit: dge_matrices
         path('versions.yml'), emit: versions
 
     script:
@@ -250,9 +252,14 @@ process DGE_GENERATION {
     Rscript ${script} \
         --dge ${sample_dge_path} \
         --pred ./ \
-        --output ${meta}_dge_matrix.txt
+        --output ${meta}_iDGE
 
     # Write versions.yml from bash
     echo "!${task.process}:" > versions.yml
+    """
+    stub:
+    """
+    mkdir ${meta}_iDGE
+    echo "R: stub" > versions.yml
     """
 }
