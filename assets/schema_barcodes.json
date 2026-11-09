@@ -15,10 +15,9 @@
             },
             "barcodes": {
                 "type": "string",
-                "format": "file-path",
-                "exists": true,
-                "description": "Path to a text file containing barcodes (one per line)",
-                "errorMessage": "Barcodes file must exist and be a valid file path"
+                "pattern": "^\\S+$",
+                "description": "Path to a text file containing barcodes (one per line), absolute or relative to the whitelist csv (existence checked by the pipeline)",
+                "errorMessage": "Barcodes file path must be provided and cannot contain spaces"
             }
         },
         "required": ["sample", "barcodes"]

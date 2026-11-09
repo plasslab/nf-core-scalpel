@@ -488,6 +488,27 @@ check("#32", "non-matching clusters file stops with an explicit message",
   res$status != 0 & any(grepl("No cell of the clusters file matches", res$log)))
 ```
 
+```{r scenario-whitelist}
+#| eval: !expr params$scenarios
+#- barcodes whitelist (paths relative to the whitelist csv, #24)...
+res = run_pipeline("whitelist", c("--barcodes_whitelist", normalizePath("tests/data/light/barcodes_whitelist.csv")))
+check("#24", "run with --barcodes_whitelist completes", res$status == 0)
+if(res$status == 0){
+  for(s in SAMPLES){
+    kept = fread(file.path(res$outdir, "dge", paste0(s, "_iDGE/barcodes.tsv.gz")), header = FALSE)$V1
+    whitelist = readLines(file.path("tests/data/light/barcodes", paste0(s, "_barcodes.txt")))
+    check("#24", paste0(s, ": iDGE cells restricted to the whitelist (", length(kept), " cells)"), length(kept) > 0 & all(kept %in% whitelist))
+  }
+}
+
+#- missing whitelist file...
+bad_whitelist = file.path(SCEN, "bad_whitelist.csv")
+writeLines(c("sample,barcodes", "SRR6129050,missing_barcodes.txt"), bad_whitelist)
+res = run_pipeline("whitelist_bad", c("--barcodes_whitelist", bad_whitelist))
+check("#24", "missing whitelist file stops with an explicit message",
+  res$status != 0 & any(grepl("Barcodes whitelist error", res$log)))
+```
+
 ```{r scenario-fixed-annotation}
 #| eval: !expr params$scenarios
 #- reuse the selected isoforms of the baseline run (no transcriptome/GTF processing)...

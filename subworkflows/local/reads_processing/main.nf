@@ -6,7 +6,6 @@
 */
 
 include { SAMTOOLS_INDEX     } from '../../../modules/nf-core/samtools/index/main'
-include { resolveInputPath   } from '../utils_nfcore_scalpel_pipeline'
 
 workflow READS_PROCESSING {
 
@@ -25,7 +24,14 @@ workflow READS_PROCESSING {
         ch_barcodes_whitelist = channel
             .fromPath(params.barcodes_whitelist)
             .splitCsv(header: true)
-            .map { row -> tuple(row.sample, file(resolveInputPath(row.barcodes, whitelist_dir, row.sample, 'barcodes'))) }
+            .map{ row ->
+                def is_absolute = row.barcodes ==~ /^(\/|[a-zA-Z][a-zA-Z0-9+.-]*:\/\/).*/
+                def barcodes_file = is_absolute ? file(row.barcodes) : whitelist_dir.resolve(row.barcodes)
+                if( !barcodes_file.exists() ) {
+                    error("Barcodes whitelist error -> sample '${row.sample}': '${row.barcodes}' not found (resolved to '${barcodes_file}'). Relative paths are resolved from the whitelist csv directory.")
+                }
+                tuple(row.sample, barcodes_file)
+            }
     } else {
         ch_barcodes_whitelist = channel.empty()
     }
