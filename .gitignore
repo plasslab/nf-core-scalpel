@@ -11,3 +11,4 @@ tests/.env/
 tests/results/
 test.html
 test_files/
+Rplots.pdf
