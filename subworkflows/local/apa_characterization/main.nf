@@ -26,7 +26,7 @@ workflow APA_CHARACTERIZATION {
         ch_idge.map{ it = it[1] }.collect(),
         clusters_file,
         file("${projectDir}/subworkflows/local/apa_characterization/bin/differential_isoform_usage.R"),
-        file("${projectDir}/subworkflows/local/apa_characterization/bin/scalpel_library.R")
+        file("${projectDir}/subworkflows/local/apa_characterization/bin/differential_isoform_usage_functions.R")
     )
     ch_versions = ch_versions.mix(DIFFERENTIAL_ISOFORM_USAGE.out.versions)
 

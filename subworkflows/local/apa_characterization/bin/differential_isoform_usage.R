@@ -4,7 +4,7 @@ suppressPackageStartupMessages(require(argparse, quietly =TRUE))
 suppressPackageStartupMessages(library(data.table, quietly = TRUE))
 suppressPackageStartupMessages(library(dplyr, quietly = TRUE))
 suppressPackageStartupMessages(library(Seurat, quietly = TRUE))
-source("scalpel_library.R") %>% suppressPackageStartupMessages()
+source("differential_isoform_usage_functions.R") %>% suppressPackageStartupMessages()
 
 
 #ArgumentParser

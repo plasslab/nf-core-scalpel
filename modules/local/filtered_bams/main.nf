@@ -4,7 +4,7 @@ process FILTERED_BAMS {
 
     conda "bioconda::samtools=1.25 conda-forge::r-base=4.4.3 conda-forge::r-fst=0.9.8"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/samtools_r-base_r-fst:2381996845f05fb0' :
+        'docker://community.wave.seqera.io/library/samtools_r-base_r-fst:1eb0eb46db0b220d' :
         'community.wave.seqera.io/library/samtools_r-base_r-fst:1eb0eb46db0b220d' }"
 
     input:

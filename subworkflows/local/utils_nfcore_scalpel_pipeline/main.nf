@@ -37,7 +37,7 @@ workflow PIPELINE_INITIALISATION {
 
     main:
 
-    ch_versions = Channel.empty()
+    ch_versions = channel.empty()
 
     //
     // Print version and exit if required and dump pipeline parameters to JSON file
@@ -69,7 +69,7 @@ workflow PIPELINE_INITIALISATION {
 * Software dependencies
     https://github.com/nf-core/scalpel/blob/master/CITATIONS.md
 """
-    command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input samplesheet.csv --outdir <OUTDIR>"
+    command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --samplesheet samplesheet.csv --outdir <OUTDIR>"
 
     UTILS_NFSCHEMA_PLUGIN (
         workflow,
@@ -80,7 +80,8 @@ workflow PIPELINE_INITIALISATION {
         show_hidden,
         before_text,
         after_text,
-        command
+        command,
+        null
     )
 
     //
@@ -110,7 +111,7 @@ Pipeline options
     // Create channel from input file provided through params.samplesheet
     //
 
-    Channel
+    channel
         .fromList(samplesheetToList(params.samplesheet, "${projectDir}/assets/schema_input.json"))
         .map {
             meta, fastq_1, fastq_2, cranger_path, dge ->
@@ -128,8 +129,8 @@ Pipeline options
                 ] + resolveSampleLayout(meta.id, sample_path, params.sequencing_platform, dge_path) ]
         }
         .groupTuple()
-        .map { samplesheet ->
-            validateInputSamplesheet(samplesheet)
+        .map { sample_rows ->
+            validateInputSamplesheet(sample_rows)
         }
         .map {
             meta, fastqs ->
@@ -159,7 +160,7 @@ workflow PIPELINE_COMPLETION {
     hook_url        //  string: hook URL for notifications
 
     main:
-    summary_params = paramsSummaryMap(workflow, parameters_schema: "nextflow_schema.json")
+    summary_params = paramsSummaryMap(parameters_schema: "nextflow_schema.json")
 
     //
     // Completion email and summary
@@ -207,20 +208,33 @@ def resolveInputPath(input_path, base_dir, sample_id, column) {
 }
 
 //
+// First existing path among candidates (relative to a sample directory)
+//
+def pickExistingPath(sample_dir, candidates) {
+    return candidates.collect{ candidate -> sample_dir.resolve(candidate) }.find{ candidate_path -> candidate_path.exists() }
+}
+
+//
+// BAM index next to a BAM file (<bam>.bai or <name>.bai), null if none
+//
+def findBamIndex(bam_path) {
+    def candidates = ["${bam_path}.bai", "${bam_path}".replaceAll('\\.bam$', '.bai')].findAll{ candidate -> candidate != "${bam_path}" }
+    return candidates.collect{ candidate -> file(candidate) }.find{ candidate_file -> candidate_file.exists() }
+}
+
+//
 // Resolve sample layout (Cell Ranger, Cell Ranger ARC multiome, STARsolo, Drop-seq BAM + DGE)
 // returns [bam, bai, dge, barcodes] ('' when not available)
 //
 def resolveSampleLayout(sample_id, sample_path, platform, dge_path) {
     def sample_dir = file(sample_path)
-    def pick = { candidates -> candidates.collect{ sample_dir.resolve(it) }.find{ it.exists() } }
-    def find_bai = { bam_path -> ["${bam_path}.bai", "${bam_path}".replaceAll('\\.bam$', '.bai')].findAll{ it != "${bam_path}" }.collect{ file(it) }.find{ it.exists() } }
 
     // Drop-seq: BAM file (XC/XM tags) + DGE count matrix (Drop-seq tools); cells = DGE barcodes
     if( platform == 'dropseq' ) {
         if( sample_dir.isDirectory() || !sample_path.endsWith('.bam') ) {
             error("Samplesheet error -> sample '${sample_id}': with --sequencing_platform dropseq, column 'cranger_path' must be the BAM file (got '${sample_path}').")
         }
-        def bai_dropseq = find_bai(sample_path)
+        def bai_dropseq = findBamIndex(sample_path)
         return [ sample_path, bai_dropseq ? bai_dropseq.toString() : '', dge_path, '' ]
     }
 
@@ -237,8 +251,8 @@ def resolveSampleLayout(sample_id, sample_path, platform, dge_path) {
         'Solo.out/Gene/filtered',                   // STARsolo
         'Solo.out/GeneFull/filtered'
     ]
-    def bam = pick(bam_candidates)
-    def dge_dir = pick(dge_candidates)
+    def bam = pickExistingPath(sample_dir, bam_candidates)
+    def dge_dir = pickExistingPath(sample_dir, dge_candidates)
     if( !bam ) {
         error("Samplesheet error -> sample '${sample_id}': no BAM file found in '${sample_path}'. Expected one of: ${bam_candidates.join(', ')}.")
     }
@@ -249,7 +263,7 @@ def resolveSampleLayout(sample_id, sample_path, platform, dge_path) {
     if( !barcodes ) {
         error("Samplesheet error -> sample '${sample_id}': no barcodes.tsv(.gz) in '${dge_dir}'.")
     }
-    def bai = find_bai(bam)
+    def bai = findBamIndex(bam)
     return [ bam.toString(), bai ? bai.toString() : '', dge_dir.toString(), barcodes.toString() ]
 }
 
@@ -358,7 +372,7 @@ def imNotification(summary_params, hook_url) {
     misc_fields['nxf_timestamp']  = workflow.nextflow.timestamp
 
     def msg_fields = [:]
-    msg_fields['version']      = getWorkflowVersion()
+    msg_fields['version']      = workflow.manifest.version ? "v${workflow.manifest.version}" : ''
     msg_fields['runName']      = workflow.runName
     msg_fields['success']      = workflow.success
     msg_fields['dateComplete'] = workflow.complete

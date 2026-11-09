@@ -48,7 +48,7 @@ workflow ANNOTATION_PROCESSING {
     // Isoform Selection based on 3'end region profile
     ISOFORM_SELECTION(
         TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING.out.gtf_entries.flatten(),
-        file("${projectDir}/subworkflows/local/annotation_processing/bin/transcript_collapser.R"),
+        file("${projectDir}/subworkflows/local/annotation_processing/bin/isoform_selection.R"),
         params.distance_3end,
         params.distance_profile)
     ch_versions = ch_versions.mix(ISOFORM_SELECTION.out.versions)

@@ -205,7 +205,7 @@ if(length(versions_file) == 1){
 
 # Regression tests (plasslab/SCALPEL issues)
 
-## #34 — `compute_prob.R` with one-sided distances
+## #34 — `probability_distribution.R` with one-sided distances
 
 Synthetic single-isoform genes whose transcriptomic distances are all positive
 (the case that crashed with `wrong sign in 'by' argument`), then mixed signs.
@@ -228,10 +228,10 @@ for(scenario in c("positive_only", "mixed_signs")){
   reads$read_end = reads$read_start + 90
   dt_to_fst(reads, file.path(repo, "S1_chr1.ip_filtered.fst"))
   status = run_rscript(c(
-    file.path(BIN_IQ, "compute_prob.R"), "--repo", repo, "--gene_frac", "98%", "--bins", "20",
+    file.path(BIN_IQ, "probability_distribution.R"), "--repo", repo, "--gene_frac", "98%", "--bins", "20",
     "--threads", "1", "--OUTPUT_PROB", file.path(repo, "S1.prob"), "--OUTPUT_PDF", file.path(repo, "S1.pdf")
   ), file.path(repo, "log.txt"))
-  check("#34", paste0("compute_prob.R succeeds (", scenario, ")"), status == 0)
+  check("#34", paste0("probability_distribution.R succeeds (", scenario, ")"), status == 0)
   if(status == 0){
     prob = fread(file.path(repo, "S1.prob"), col.names = c("transcriptomic_distance", "counts", "probs_bin"))
     check("#34", paste0("probabilities sum to 100 (", scenario, ")"), abs(sum(prob$probs_bin) - 100) < 1e-6)
@@ -279,11 +279,11 @@ reads$V15 = paste0("UB:Z:", c("u1", "u1", "u2", "u2", "u3", "u3"))
 fwrite(reads, file.path(repo, "reads.bed"), sep = "\t", col.names = FALSE)
 
 status = run_rscript(c(
-  file.path(BIN_RP, "reads_merging_v3.R"), "--reads", file.path(repo, "reads.bed"),
+  file.path(BIN_RP, "reads_mapping_and_filtering.R"), "--reads", file.path(repo, "reads.bed"),
   "--annotations", file.path(repo, "annots.tsv"), "--output", file.path(repo, "out.fst"),
   "--distance_threshold", "5000"
 ), file.path(repo, "log.txt"))
-check("#37", "reads_merging_v3.R succeeds", status == 0)
+check("#37", "reads_mapping_and_filtering.R succeeds", status == 0)
 
 if(status == 0){
   kept = unique(fst_to_dt(file.path(repo, "out.fst"))[, .(tags, transcript_name)])
@@ -333,11 +333,11 @@ message("dense size: ", format(N_CELLS * uniqueN(preds$transcript_name), big.mar
 
 start_time = Sys.time()
 status = run_rscript(c(
-  file.path(BIN_IQ, "generate_DGE.R"), "--dge", file.path(repo, "dge"), "--pred", repo,
+  file.path(BIN_IQ, "dge_generation.R"), "--dge", file.path(repo, "dge"), "--pred", repo,
   "--output", file.path(repo, "S1_iDGE")
 ), file.path(repo, "log.txt"))
-message("generate_DGE.R: ", format(round(difftime(Sys.time(), start_time, units = "secs"), 1)))
-check("#38", "generate_DGE.R succeeds beyond the integer limit", status == 0)
+message("dge_generation.R: ", format(round(difftime(Sys.time(), start_time, units = "secs"), 1)))
+check("#38", "dge_generation.R succeeds beyond the integer limit", status == 0)
 
 if(status == 0){
   idge = readMM(file.path(repo, "S1_iDGE/matrix.mtx.gz"))

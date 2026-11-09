@@ -36,7 +36,7 @@
                     },
                     "utils_nfschema_plugin": {
                         "branch": "master",
-                        "git_sha": "fdc08b8b1ae74f56686ce21f7ea11ad11990ce57",
+                        "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
                         "installed_by": ["subworkflows"]
                     }
                 }

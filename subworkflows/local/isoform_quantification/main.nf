@@ -19,14 +19,14 @@ workflow ISOFORM_QUANTIFICATION {
     mapped_reads // channel: mapped reads from READS_PROCESSING
 
     main:
-    ch_versions = Channel.empty()
+    ch_versions = channel.empty()
 
     mapped_reads.map{ it = tuple(it[0], it[2]) }.set{ mapped_reads}
 
     // Calculate probability distribution for each sample on transcriptomic space
     PROBABILITY_DISTRIBUTION(
         mapped_reads,
-        file("${workflow.projectDir}/subworkflows/local/isoform_quantification/bin/compute_prob.R"),
+        file("${workflow.projectDir}/subworkflows/local/isoform_quantification/bin/probability_distribution.R"),
         params.gene_fraction,
         params.binsize
     )
@@ -38,7 +38,7 @@ workflow ISOFORM_QUANTIFICATION {
     // Calculate fragment probablity for each read and isoform combination
     FRAGMENT_PROBABILITY(
         reads_probs,
-        file("${workflow.projectDir}/subworkflows/local/isoform_quantification/bin/frag_prob.R")
+        file("${workflow.projectDir}/subworkflows/local/isoform_quantification/bin/fragment_probability.R")
     )
     ch_versions = ch_versions.mix(FRAGMENT_PROBABILITY.out.versions)
 
@@ -67,7 +67,7 @@ workflow ISOFORM_QUANTIFICATION {
     // Generate isoform DGE matrix (sparse, 10x format) for each sample
     DGE_GENERATION(
         dge_inputs,
-        file("${workflow.projectDir}/subworkflows/local/isoform_quantification/bin/generate_DGE.R")
+        file("${workflow.projectDir}/subworkflows/local/isoform_quantification/bin/dge_generation.R")
     )
     ch_versions = ch_versions.mix(DGE_GENERATION.out.versions)
 

@@ -115,7 +115,7 @@ workflow READS_PROCESSING {
 
     READS_MAPPING_AND_FILTERING(
         reads_and_annots,
-        file("${projectDir}/subworkflows/local/reads_processing/bin/reads_merging_v3.R"),
+        file("${projectDir}/subworkflows/local/reads_processing/bin/reads_mapping_and_filtering.R"),
         params.distance_profile
     )
     ch_versions = ch_versions.mix(READS_MAPPING_AND_FILTERING.out.versions)
