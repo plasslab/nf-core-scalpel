@@ -55,12 +55,12 @@ workflow {
         channel.fromPath(params.transcriptome, checkIfExists: true).collect(),
         channel.fromPath(params.gtf, checkIfExists: true).collect())
     
-    // PIPELINE_COMPLETION (
-    //     params.email,
-    //     params.email_on_fail,
-    //     params.plaintext_email,
-    //     params.outdir,
-    //     params.monochrome_logs,
-    //     params.hook_url,
-    // )
+    PIPELINE_COMPLETION (
+        params.email,
+        params.email_on_fail,
+        params.plaintext_email,
+        params.outdir,
+        params.monochrome_logs,
+        params.hook_url,
+    )
 }

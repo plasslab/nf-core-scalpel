@@ -13,7 +13,6 @@ include { paramsSummaryMap          } from 'plugin/nf-schema'
 include { samplesheetToList         } from 'plugin/nf-schema'
 include { completionEmail           } from '../../nf-core/utils_nfcore_pipeline'
 include { completionSummary         } from '../../nf-core/utils_nfcore_pipeline'
-include { imNotification            } from '../../nf-core/utils_nfcore_pipeline'
 include { UTILS_NFCORE_PIPELINE     } from '../../nf-core/utils_nfcore_pipeline'
 include { UTILS_NEXTFLOW_PIPELINE   } from '../../nf-core/utils_nextflow_pipeline'
 
@@ -114,7 +113,13 @@ Pipeline options
     Channel
         .fromList(samplesheetToList(params.samplesheet, "${projectDir}/assets/schema_input.json"))
         .map {
-            meta, fastq_1, fastq_2, cranger_path -> [ meta.id, meta, [ fastq_1, fastq_2, cranger_path ] ]
+            meta, fastq_1, fastq_2, cranger_path ->
+                def base_dir = file(params.samplesheet).parent
+                [ meta.id, meta, [
+                    resolveInputPath(fastq_1, base_dir, meta.id, 'fastq_1'),
+                    resolveInputPath(fastq_2, base_dir, meta.id, 'fastq_2'),
+                    resolveInputPath(cranger_path, base_dir, meta.id, 'cranger_path')
+                ] ]
         }
         .groupTuple()
         .map { samplesheet ->
@@ -182,6 +187,18 @@ workflow PIPELINE_COMPLETION {
     FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+
+//
+// Resolve samplesheet paths (relative paths -> samplesheet directory) & check existence
+//
+def resolveInputPath(input_path, base_dir, sample_id, column) {
+    def is_absolute = input_path ==~ /^(\/|[a-zA-Z][a-zA-Z0-9+.-]*:\/\/).*/
+    def resolved_path = is_absolute ? file(input_path) : base_dir.resolve(input_path)
+    if( !resolved_path.exists() ) {
+        error("Samplesheet error -> sample '${sample_id}', column '${column}': '${input_path}' not found (resolved to '${resolved_path}'). Relative paths are resolved from the samplesheet directory.")
+    }
+    return resolved_path.toString()
+}
 
 //
 // Validate channels from input samplesheet
@@ -255,4 +272,68 @@ def methodsDescriptionText(mqc_methods_yaml) {
     def description_html = engine.createTemplate(methods_text).make(meta)
 
     return description_html.toString()
+}
+
+//
+// Send notification via hook URL
+//
+def imNotification(summary_params, hook_url) {
+    def summary = [:]
+    summary_params
+        .keySet()
+        .sort()
+        .each { group ->
+            summary << summary_params[group]
+        }
+
+    def misc_fields = [:]
+    misc_fields['start']          = workflow.start
+    misc_fields['complete']       = workflow.complete
+    misc_fields['scriptfile']     = workflow.scriptFile
+    misc_fields['scriptid']       = workflow.scriptId
+    if (workflow.repository) {
+        misc_fields['repository'] = workflow.repository
+    }
+    if (workflow.commitId) {
+        misc_fields['commitid']   = workflow.commitId
+    }
+    if (workflow.revision) {
+        misc_fields['revision']   = workflow.revision
+    }
+    misc_fields['nxf_version']    = workflow.nextflow.version
+    misc_fields['nxf_build']      = workflow.nextflow.build
+    misc_fields['nxf_timestamp']  = workflow.nextflow.timestamp
+
+    def msg_fields = [:]
+    msg_fields['version']      = getWorkflowVersion()
+    msg_fields['runName']      = workflow.runName
+    msg_fields['success']      = workflow.success
+    msg_fields['dateComplete'] = workflow.complete
+    msg_fields['duration']     = workflow.duration
+    msg_fields['exitStatus']   = workflow.exitStatus
+    msg_fields['errorMessage'] = (workflow.errorMessage ?: 'None')
+    msg_fields['errorReport']  = (workflow.errorReport ?: 'None')
+    msg_fields['commandLine']  = workflow.commandLine.replaceFirst(/ +--hook_url +[^ ]+/, "")
+    msg_fields['projectDir']   = workflow.projectDir
+    msg_fields['summary']      = summary << misc_fields
+
+    // Render the JSON template
+    def engine       = new groovy.text.GStringTemplateEngine()
+    // Different JSON depending on the service provider
+    // Defaults to "Adaptive Cards" (https://adaptivecards.io), except Slack which has its own format
+    def json_path     = hook_url.contains("hooks.slack.com") ? "slackreport.json" : "adaptivecard.json"
+    def hf            = new File("${workflow.projectDir}/assets/${json_path}")
+    def json_template = engine.createTemplate(hf).make(msg_fields)
+    def json_message  = json_template.toString()
+
+    // POST
+    def post = new URL(hook_url).openConnection()
+    post.setRequestMethod("POST")
+    post.setDoOutput(true)
+    post.setRequestProperty("Content-Type", "application/json")
+    post.getOutputStream().write(json_message.getBytes("UTF-8"))
+    def postRC = post.getResponseCode()
+    if (!postRC.equals(200)) {
+        log.warn(post.getErrorStream().getText())
+    }
 }

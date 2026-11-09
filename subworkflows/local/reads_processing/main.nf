@@ -53,28 +53,15 @@ workflow READS_PROCESSING {
             }
     } else {
         ch_bam_with_barcodes = ch_bam_files.map { meta, files ->
-            def barcodes = files instanceof List ? (files[1]) : file("NO_BARCODES")
-            def bam = files instanceof List ? (files[0]) : (files)
+            def barcodes = files instanceof List ? file(files[1]) : file("NO_BARCODES")
+            def bam = files instanceof List ? file(files[0]) : file(files)
             tuple(meta, bam, barcodes)
         }
     }
 
-    // If test profile, specify the ${projectDir} location for BAM and barcodes files
-    if (workflow.profile.tokenize(',').contains('test')) {
-        ch_bam_with_barcodes.map{ 
-            meta, bam, barcodes -> tuple(
-                meta, 
-                file("${projectDir}/${bam}"), 
-                file("${projectDir}/${barcodes}")
-            )
-        }.set{ ch_bam_with_barcodes2 }
-    } else {
-        ch_bam_with_barcodes.set{ ch_bam_with_barcodes2 }
-    }
-
     // Convert BAM to BED files
     BED_CONVERSION(
-        ch_bam_with_barcodes2.combine(ch_all_transcripts.map{ it=it[0] }),
+        ch_bam_with_barcodes.combine(ch_all_transcripts.map{ it=it[0] }),
         params.sequencing_platform
     )
     ch_versions = ch_versions.mix(BED_CONVERSION.out.versions)
@@ -184,13 +171,13 @@ process READS_MAPPING_AND_FILTERING {
 
     script:
     """
-    which Rscript
     bam2bed --all-reads --split < ${reads} > ${reads.baseName}.tmp
     Rscript ${script} \
         --reads ${reads.baseName}.tmp \
         --annotations ${annots} \
         --output ${meta}_${reads.baseName}.fst \
         --distance_threshold ${distance_thr}
+    rm -f ${reads.baseName}.tmp
     
     # Write versions.yml for bedtools version in bash
     echo "!${task.process}:" > versions.yml

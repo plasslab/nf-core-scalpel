@@ -1,7 +1,5 @@
 #!/usr/bin/env Rscript
 
-require(fst)
-
 suppressPackageStartupMessages({
   library(argparse,   quietly = TRUE)
   library(data.table, quietly = TRUE)
