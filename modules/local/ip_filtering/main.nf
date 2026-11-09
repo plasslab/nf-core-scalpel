@@ -8,7 +8,7 @@ process IP_FILTERING {
         'community.wave.seqera.io/library/r-base_r-argparse_r-dplyr_r-data.table_pruned:122f7e640136e794' }"
 
     input:
-        tuple val(meta), val(seqname), path(mapped_reads), path(ip_reference)
+        tuple val(meta), val(seqname), path(mapped_reads), path(ip_reference), path(annotations)
         path(script)
         val(distance_threshold)
 
@@ -21,6 +21,7 @@ process IP_FILTERING {
     Rscript ${script} \
         --reads ${mapped_reads} \
         --ip_reference ${ip_reference} \
+        --annotations ${annotations} \
         --output ${mapped_reads.baseName}.ip_filtered.fst \
         --threshold_dist ${distance_threshold} \
         --threads ${task.cpus}

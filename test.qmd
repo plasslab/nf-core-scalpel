@@ -58,7 +58,10 @@ if(!dir.exists(ENV_DIR)){
 RSCRIPT = file.path(ENV_DIR, "bin/Rscript")
 SAMTOOLS = file.path(ENV_DIR, "bin/samtools")
 if(!file.exists(SAMTOOLS)){
-  stopifnot(system2("conda", c("install", "-y", "-q", "-p", ENV_DIR, "--override-channels", "-c", "conda-forge", "-c", "bioconda", "samtools=1.23.1")) == 0)
+  stopifnot(system2("conda", c("install", "-y", "-q", "-p", ENV_DIR, "--override-channels", "-c", "conda-forge", "-c", "bioconda", "samtools=1.25")) == 0)
+}
+if(!dir.exists(file.path(ENV_DIR, "lib/R/library/GenomicRanges"))){
+  stopifnot(system2("conda", c("install", "-y", "-q", "-p", ENV_DIR, "--override-channels", "-c", "conda-forge", "-c", "bioconda", "bioconductor-genomicranges=1.58.0")) == 0)
 }
 
 #- helpers...
@@ -295,6 +298,43 @@ if(status == 0){
   check("#37", "bc3::u3 — dropped (intergenic read, filter a)", !any(grepl("bc3", kept$tags)))
 } else {
   cat(readLines(file.path(repo, "log.txt")), sep = "\n")
+}
+```
+
+## Fragment agreement — one disagreeing read drops the fragment from that isoform
+
+Synthetic fragments of 2 reads: both agree with isoform X, one disagrees with isoform Y
+(crosses Y's exon boundary, spliced at another donor, spliced on an exon absent from Y,
+> 600 nt from Y's 3' end). Expected: kept on X, dropped from Y; control fragments compatible
+with both isoforms are kept on both (`tests/unit/read_agreement_test.R`).
+
+```{r fragment-agreement}
+out_dir = file.path(TMP, "read_agreement")
+status = run_rscript(c("tests/unit/read_agreement_test.R", file.path(BIN_RP, "reads_mapping_and_filtering.R"), out_dir), file.path(TMP, "read_agreement.log"))
+check("agreement", "read agreement test runs", status == 0)
+if(status == 0){
+  res = fread(file.path(out_dir, "checks.tsv"))
+  for(i in seq_len(nrow(res))) check("agreement", res$case[i], res$result[i] == "PASS")
+} else {
+  cat(readLines(file.path(TMP, "read_agreement.log")), sep = "\n")
+}
+```
+
+## Internal priming — original SCALPEL rule
+
+For each isoform, the internal priming site closest to its 3' end (>= `--distance_ip`) is
+located on its exons, and every fragment lying entirely upstream of it is discarded, on both
+strands (`tests/unit/internal_priming_test.R`).
+
+```{r internal-priming}
+out_dir = file.path(TMP, "internal_priming")
+status = run_rscript(c("tests/unit/internal_priming_test.R", file.path(BIN_RP, "ip_filtering.R"), out_dir), file.path(TMP, "internal_priming.log"))
+check("ip", "internal priming test runs", status == 0)
+if(status == 0){
+  res = fread(file.path(out_dir, "checks.tsv"))
+  for(i in seq_len(nrow(res))) check("ip", res$case[i], res$result[i] == "PASS")
+} else {
+  cat(readLines(file.path(TMP, "internal_priming.log")), sep = "\n")
 }
 ```
 

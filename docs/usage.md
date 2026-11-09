@@ -95,6 +95,13 @@ the same information (tab-separated: chromosome, start, end, ., ., strand) and c
 to `--ip_reference` as plain, `.gz` or `.tar.gz` files. The reference is split by chromosome
 once at the start of the run.
 
+**Filtering rule (original SCALPEL).** For each isoform, the internal priming site closest to
+its 3' end, at least `--distance_ip` nt away (default 60), is located on its exons. Every
+fragment (cell + UMI) lying entirely upstream of that site is discarded for this isoform, as it
+more likely originates from oligo-dT priming on that A-rich stretch than from the genuine 3'
+end. Sites closer than `--distance_ip` to the 3' end are ignored. The rule applies to both
+strands.
+
 ## Optional inputs
 
 ### Cell barcodes whitelist (`--barcodes_whitelist`)

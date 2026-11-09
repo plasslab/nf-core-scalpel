@@ -136,8 +136,8 @@ workflow READS_PROCESSING {
     // Filter reads associated to internal priming positions
     READS_MAPPING_AND_FILTERING.out.mapped_reads.map{
         meta, seqname, mapped_reads -> tuple(seqname, meta, mapped_reads)
-    }.combine(ch_ip_chrs, by: 0).map{
-        seqname, meta, mapped_reads, ip_chr -> tuple(meta, seqname, mapped_reads, ip_chr)
+    }.combine(ch_ip_chrs, by: 0).combine(ch_all_transcripts, by: 0).map{
+        seqname, meta, mapped_reads, ip_chr, annots -> tuple(meta, seqname, mapped_reads, ip_chr, annots)
     }.set{ reads_and_ips }
 
     IP_FILTERING(
