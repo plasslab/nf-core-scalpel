@@ -241,7 +241,7 @@ def resolveSampleLayout(sample_id, sample_path, platform) {
     if( !barcodes ) {
         error("Samplesheet error -> sample '${sample_id}': no barcodes.tsv(.gz) in '${dge_dir}'.")
     }
-    def bai = ["${bam}.bai", "${bam}".replaceAll(/\.bam\$/, '.bai')].collect{ file(it) }.find{ it.exists() }
+    def bai = ["${bam}.bai", "${bam}".replaceAll('\\.bam$', '.bai')].findAll{ it != "${bam}" }.collect{ file(it) }.find{ it.exists() }
     return [ bam.toString(), bai ? bai.toString() : '', dge_dir.toString(), barcodes.toString() ]
 }
 

@@ -10,7 +10,40 @@ The directories listed below will be created in the results directory after the 
 
 The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes data using the following steps:
 
+- [Main results](#main-results) - isoform count matrices & differential isoform usage
+- [Intermediate files](#intermediate-files) - per-step outputs
 - [Pipeline information](#pipeline-information) - Report metrics generated during the workflow execution
+
+### Main results
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `dge/<sample>_iDGE/`: isoform x cell count matrix (iDGE) per sample, sparse 10x format
+  (`matrix.mtx.gz`, `features.tsv.gz`, `barcodes.tsv.gz`). Features are `gene***transcript`.
+  Read with `Seurat::Read10X("<sample>_iDGE", gene.column = 1)`.
+- `differential/iDGE_seurat.RDS`: Seurat object of all samples (cells named `<sample>_<barcode>`,
+  metadata `orig.ident` = sample, `Barcodes` = cell barcode, `Clusters`).
+- `differential/DIU_table.csv`: differential isoform usage (tab-separated) between clusters
+  (`--clusters`) or samples: aggregated counts per group, filters (`thr.abund`, `thr.var`),
+  chi-squared `p.value`, `statistic` and BH `p.value.adjusted`.
+
+</details>
+
+### Intermediate files
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `salmon/`: pseudobulk salmon quantification per sample.
+- `transcript/`, `isoform/`: per-chromosome annotation with averaged TPM and selected isoforms
+  (`isoform/*.annots.gz`, reusable with `--isoform_annotation`).
+- `bed/`, `reads/`, `ip/`: reads per chromosome, reads mapped to isoforms, internal priming filtered reads.
+- `probability/<sample>.prob|.pdf`: read distance distribution to the 3' ends.
+- `fragment/`, `cell/`, `em/`: fragment probabilities, cell chunks and EM isoform abundances.
+
+</details>
+
 
 ### Pipeline information
 

@@ -15,6 +15,7 @@ params:
   run_pipeline: true      # run the light end-to-end test (-profile test,conda)
   resume: true            # use nextflow -resume
   regenerate_data: false  # rebuild tests/data/light from subsample_data/
+  scenarios: true         # input layouts / checks / clusters / fixed annotation runs
 ---
 
 ```{r setup}
@@ -55,8 +56,33 @@ if(!dir.exists(ENV_DIR)){
   stopifnot(status == 0)
 }
 RSCRIPT = file.path(ENV_DIR, "bin/Rscript")
+SAMTOOLS = file.path(ENV_DIR, "bin/samtools")
+if(!file.exists(SAMTOOLS)){
+  stopifnot(system2("conda", c("install", "-y", "-q", "-p", ENV_DIR, "--override-channels", "-c", "conda-forge", "-c", "bioconda", "samtools=1.23.1")) == 0)
+}
 
 #- helpers...
+run_pipeline = function(name, extra_args, samplesheet = "tests/data/light/samplesheet.csv"){
+  log_file = file.path(TMP, paste0(name, ".log"))
+  status = system2(
+    "nextflow",
+    c("run", PROJECT_DIR, "-profile", "test,conda", "--outdir", file.path(TMP, name), "-resume",
+      "--samplesheet", normalizePath(samplesheet), extra_args),
+    stdout = log_file, stderr = log_file, env = "NXF_ANSI_LOG=false"
+  )
+  return(list(status = status, log = readLines(log_file), outdir = file.path(TMP, name)))
+}
+read_idge = function(idge_dir){
+  m = readMM(file.path(idge_dir, "matrix.mtx.gz"))
+  rownames(m) = fread(file.path(idge_dir, "features.tsv.gz"), header = FALSE)$V1
+  colnames(m) = fread(file.path(idge_dir, "barcodes.tsv.gz"), header = FALSE)$V1
+  return(as.matrix(m)[order(rownames(m)), order(colnames(m)), drop = FALSE])
+}
+same_idge = function(dir_a, dir_b){
+  a = read_idge(dir_a)
+  b = read_idge(dir_b)
+  return(identical(dim(a), dim(b)) && identical(dimnames(a), dimnames(b)) && max(abs(a - b)) < 1e-9)
+}
 run_rscript = function(args, log_file){
   status = system2(RSCRIPT, args, stdout = log_file, stderr = log_file)
   return(status)
@@ -96,6 +122,8 @@ Light dataset: GSE104556 (2 samples), restricted to `chr17:14-16Mb`
 ```{r pipeline-run}
 #| eval: !expr params$run_pipeline
 PIPELINE_LOG = file.path(TMP, "pipeline.log")
+#- fresh results directory (cached tasks do not overwrite previously published files)...
+unlink(OUTDIR, recursive = TRUE)
 start_time = Sys.time()
 status = system2(
   "nextflow",
@@ -139,6 +167,16 @@ for(s in SAMPLES){
     check("output", paste0(s, ": iDGE counts finite & non-negative"), all(is.finite(idge@x)) & all(idge@x >= 0))
     check("output", paste0(s, ": iDGE features are gene***transcript"), all(grepl("\\*\\*\\*", features)))
   }
+}
+
+#- differential isoform usage (samples compared when no --clusters)...
+diu_file = file.path(OUTDIR, "differential", "DIU_table.csv")
+check("output", "DIU_table.csv & iDGE_seurat.RDS written",
+  file.exists(diu_file) & file.exists(file.path(OUTDIR, "differential", "iDGE_seurat.RDS")))
+if(file.exists(diu_file)){
+  diu = fread(diu_file)
+  check("output", "DIU table compares the samples (one column per sample)", all(SAMPLES %in% colnames(diu)))
+  knitr::kable(head(diu[order(p.value.adjusted)], 6), digits = 4)
 }
 ```
 
@@ -305,6 +343,124 @@ status = system2(
 )
 check("#29", "run fails on missing samplesheet file", status != 0)
 check("#29", "explicit 'Samplesheet error' message", any(grepl("Samplesheet error", readLines(log_file))))
+```
+
+# Scenarios (inputs, checks, clusters, fixed annotation)
+
+Each scenario is a separate `-resume` run on the light dataset (cached steps are reused).
+
+```{r scenario-inputs}
+#| eval: !expr params$scenarios
+SCEN = file.path(TMP, "scenarios")
+dir.create(SCEN, showWarnings = FALSE)
+LIGHT = normalizePath("tests/data/light")
+
+#- STARsolo layout for SRR6129050 (no BAM index, plain count files)...
+star_dir = file.path(SCEN, "starsolo/SRR6129050")
+dir.create(file.path(star_dir, "Solo.out/Gene/filtered"), showWarnings = FALSE, recursive = TRUE)
+file.copy(file.path(LIGHT, "cellranger/SRR6129050/outs/possorted_genome_bam.bam"), file.path(star_dir, "Aligned.sortedByCoord.out.bam"), overwrite = TRUE)
+for(f in c("matrix.mtx", "features.tsv", "barcodes.tsv")){
+  writeLines(readLines(gzfile(file.path(LIGHT, "cellranger/SRR6129050/outs/filtered_feature_bc_matrix", paste0(f, ".gz")))),
+    file.path(star_dir, "Solo.out/Gene/filtered", f))
+}
+
+#- Cell Ranger ARC multiome layout for SRR6129051 (gex_possorted_bam.bam + ATAC Peaks features)...
+arc_dir = file.path(SCEN, "arc/SRR6129051/outs")
+dir.create(file.path(arc_dir, "filtered_feature_bc_matrix"), showWarnings = FALSE, recursive = TRUE)
+src = file.path(LIGHT, "cellranger/SRR6129051/outs")
+file.copy(file.path(src, "possorted_genome_bam.bam"), file.path(arc_dir, "gex_possorted_bam.bam"), overwrite = TRUE)
+file.copy(file.path(src, "possorted_genome_bam.bam.bai"), file.path(arc_dir, "gex_possorted_bam.bam.bai"), overwrite = TRUE)
+gex = readMM(file.path(src, "filtered_feature_bc_matrix/matrix.mtx.gz"))
+feats = fread(file.path(src, "filtered_feature_bc_matrix/features.tsv.gz"), header = FALSE)
+nb_peaks = 50
+peaks = data.table(V1 = paste0("chr17:", 1e6 + 1:nb_peaks * 1000, "-", 1e6 + 1:nb_peaks * 1000 + 500), V2 = NA, V3 = "Peaks")
+peaks$V2 = peaks$V1
+writeMM(rbind(gex, Matrix::rsparsematrix(nb_peaks, ncol(gex), 0.05, rand.x = function(n) rpois(n, 3) + 1)), file.path(arc_dir, "filtered_feature_bc_matrix/matrix.mtx"))
+R.utils::gzip(file.path(arc_dir, "filtered_feature_bc_matrix/matrix.mtx"), overwrite = TRUE)
+fwrite(rbind(feats, peaks), file.path(arc_dir, "filtered_feature_bc_matrix/features.tsv.gz"), sep = "\t", col.names = FALSE)
+file.copy(file.path(src, "filtered_feature_bc_matrix/barcodes.tsv.gz"), file.path(arc_dir, "filtered_feature_bc_matrix/barcodes.tsv.gz"), overwrite = TRUE)
+
+layouts_sheet = file.path(SCEN, "samplesheet_layouts.csv")
+fwrite(data.table(
+  sample = c("SRR6129050", "SRR6129051"),
+  fastq_1 = file.path(LIGHT, "reads", c("SRR6129050_R1.fastq.gz", "SRR6129051_R1.fastq.gz")),
+  fastq_2 = file.path(LIGHT, "reads", c("SRR6129050_R2.fastq.gz", "SRR6129051_R2.fastq.gz")),
+  cranger_path = c(star_dir, dirname(arc_dir))
+), layouts_sheet)
+
+res = run_pipeline("layouts", c(), layouts_sheet)
+check("#22/#30", "run with STARsolo + multiome layouts completes", res$status == 0)
+if(res$status == 0){
+  check("#22", "STARsolo layout: iDGE identical to Cell Ranger layout",
+    same_idge(file.path(res$outdir, "dge/SRR6129050_iDGE"), file.path(OUTDIR, "dge/SRR6129050_iDGE")))
+  check("#30", "multiome layout: Peaks discarded, iDGE identical to GEX-only",
+    same_idge(file.path(res$outdir, "dge/SRR6129051_iDGE"), file.path(OUTDIR, "dge/SRR6129051_iDGE")))
+} else {
+  cat(tail(res$log, 30), sep = "\n")
+}
+```
+
+```{r scenario-seqnames}
+#| eval: !expr params$scenarios
+#- BAM with Ensembl-style names ('17') vs GENCODE annotation ('chr17')...
+ens_dir = file.path(SCEN, "ensembl/SRR6129050/outs")
+dir.create(file.path(ens_dir), showWarnings = FALSE, recursive = TRUE)
+file.symlink(file.path(LIGHT, "cellranger/SRR6129050/outs/filtered_feature_bc_matrix"), file.path(ens_dir, "filtered_feature_bc_matrix"))
+system(paste(
+  SAMTOOLS, "view -H", file.path(LIGHT, "cellranger/SRR6129050/outs/possorted_genome_bam.bam"), "| sed 's/SN:chr/SN:/' >", file.path(SCEN, "ens_header.sam"), "&&",
+  SAMTOOLS, "reheader", file.path(SCEN, "ens_header.sam"), file.path(LIGHT, "cellranger/SRR6129050/outs/possorted_genome_bam.bam"), ">", file.path(ens_dir, "possorted_genome_bam.bam"), "&&",
+  SAMTOOLS, "index", file.path(ens_dir, "possorted_genome_bam.bam")
+))
+ens_sheet = file.path(SCEN, "samplesheet_ensembl.csv")
+fwrite(data.table(
+  sample = "SRR6129050",
+  fastq_1 = file.path(LIGHT, "reads/SRR6129050_R1.fastq.gz"), fastq_2 = file.path(LIGHT, "reads/SRR6129050_R2.fastq.gz"),
+  cranger_path = dirname(ens_dir)
+), ens_sheet)
+
+res = run_pipeline("seqnames", c(), ens_sheet)
+check("#20/#26/#36", "chromosome naming mismatch stops the run", res$status != 0)
+check("#20/#26/#36", "explicit message: no chromosome name shared between BAM and GTF",
+  any(grepl("no chromosome name shared between the BAM file and the annotation", res$log)))
+```
+
+```{r scenario-clusters}
+#| eval: !expr params$scenarios
+#- clusters from the baseline cells: 2 clusters per sample (header present)...
+seurat_cells = rbindlist(lapply(SAMPLES, function(s){
+  bcs = fread(file.path(OUTDIR, "dge", paste0(s, "_iDGE/barcodes.tsv.gz")), header = FALSE)$V1
+  data.table(sample = s, barcode = bcs, cluster = ifelse(seq_along(bcs) %% 2 == 0, "clusterA", "clusterB"))
+}))
+clusters_ok = file.path(SCEN, "clusters.tsv")
+fwrite(seurat_cells, clusters_ok, sep = "\t")
+
+res = run_pipeline("clusters", c("--clusters", clusters_ok))
+check("#32", "run with --clusters completes", res$status == 0)
+if(res$status == 0){
+  diu = fread(file.path(res$outdir, "differential/DIU_table.csv"))
+  check("#32", "DIU table compares the clusters (clusterA, clusterB)", all(c("clusterA", "clusterB") %in% colnames(diu)))
+}
+
+#- clusters file with barcodes that do not match (e.g. missing '-1' suffix)...
+clusters_bad = file.path(SCEN, "clusters_bad.tsv")
+fwrite(seurat_cells[, .(sample, barcode = sub("-1$", "", barcode), cluster)], clusters_bad, sep = "\t")
+res = run_pipeline("clusters_bad", c("--clusters", clusters_bad))
+check("#32", "non-matching clusters file stops with an explicit message",
+  res$status != 0 & any(grepl("No cell of the clusters file matches", res$log)))
+```
+
+```{r scenario-fixed-annotation}
+#| eval: !expr params$scenarios
+#- reuse the selected isoforms of the baseline run (no transcriptome/GTF processing)...
+res = run_pipeline("fixed_annotation", c("--isoform_annotation", file.path(OUTDIR, "isoform")))
+check("#31", "run with --isoform_annotation completes", res$status == 0)
+check("#31", "annotation processing (salmon) skipped", !any(grepl("SALMON_QUANT", res$log)))
+if(res$status == 0){
+  for(s in SAMPLES){
+    check("#31", paste0(s, ": iDGE identical to the baseline run"),
+      same_idge(file.path(res$outdir, "dge", paste0(s, "_iDGE")), file.path(OUTDIR, "dge", paste0(s, "_iDGE"))))
+  }
+}
 ```
 
 # Summary
