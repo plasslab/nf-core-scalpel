@@ -1,6 +1,13 @@
 repository_type: pipeline
 nf_core_version: 3.5.2
 lint:
+  subworkflows:
+    isoform_quantification:
+      - main_nf
+    reads_processing:
+      - main_nf
+    utils_nfcore_scalpel_pipeline:
+      - main_nf
   template_strings:
     - lint_results.txt
     - subsample_data/cellranger_samples/SRR6129050/outs/molecule_info.h5

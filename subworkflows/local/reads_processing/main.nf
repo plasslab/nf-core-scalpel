@@ -1,4 +1,10 @@
 
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
 workflow READS_PROCESSING {
 
     take:
@@ -9,7 +15,6 @@ workflow READS_PROCESSING {
 
     ch_versions = channel.empty()
 
-
     // Parse optional barcodes whitelist
     if (params.barcodes_whitelist) {
         ch_barcodes_whitelist = channel
@@ -19,7 +24,6 @@ workflow READS_PROCESSING {
     } else {
         ch_barcodes_whitelist = channel.empty()
     }
-
 
     // Extract BAM files & defaults Barcodes tag
     if( params.sequencing_platform == 'chromium' ) {
@@ -49,15 +53,28 @@ workflow READS_PROCESSING {
             }
     } else {
         ch_bam_with_barcodes = ch_bam_files.map { meta, files ->
-            def barcodes = files instanceof List ? file(files[1]) : file("NO_BARCODES")
-            def bam = files instanceof List ? file(files[0]) : file(files)
+            def barcodes = files instanceof List ? (files[1]) : file("NO_BARCODES")
+            def bam = files instanceof List ? (files[0]) : (files)
             tuple(meta, bam, barcodes)
         }
     }
-    
+
+    // If test profile, specify the ${projectDir} location for BAM and barcodes files
+    if (workflow.profile.tokenize(',').contains('test')) {
+        ch_bam_with_barcodes.map{ 
+            meta, bam, barcodes -> tuple(
+                meta, 
+                file("${projectDir}/${bam}"), 
+                file("${projectDir}/${barcodes}")
+            )
+        }.set{ ch_bam_with_barcodes2 }
+    } else {
+        ch_bam_with_barcodes.set{ ch_bam_with_barcodes2 }
+    }
+
     // Convert BAM to BED files
     BED_CONVERSION(
-        ch_bam_with_barcodes.combine(ch_all_transcripts.map{ it=it[0] }),
+        ch_bam_with_barcodes2.combine(ch_all_transcripts.map{ it=it[0] }),
         params.sequencing_platform
     )
     ch_versions = ch_versions.mix(BED_CONVERSION.out.versions)
@@ -69,6 +86,7 @@ workflow READS_PROCESSING {
     ).map{
         it = tuple(it[2], it[0], it[1], it[3])
     }.set{ reads_and_annots }
+
 
     READS_MAPPING_AND_FILTERING(
         reads_and_annots,
@@ -99,10 +117,10 @@ process BED_CONVERSION {
     label 'process_single'
     tag "${meta.id}, ${annotated_seqname}"
 
-    conda "bioconda::samtools=1.23 bioconda::bedops=2.4.42 conda-forge::gawk=5.3.1"
+    conda "bioconda::samtools=1.23.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/35/35c889f53d969f55720d9292b6418744f68b405781c91e674ba98d5e8802a4c1/data' :
-        'community.wave.seqera.io/library/bedops_samtools_gawk:2ceaacb8a83d256c' }"
+        'oras://community.wave.seqera.io/library/samtools:1.23.1--5cb989b890127f7a' :
+        'community.wave.seqera.io/library/samtools:1.23.1--d76a06ff3aefee52' }"
 
     input:
         tuple val(meta), val(bam_file), path(barcodes_file), val(annotated_seqname)
@@ -123,12 +141,20 @@ process BED_CONVERSION {
     samtools view \
         -b ${bam_file} \
         -X ${bam_file}.bai ${filter_cmd} \
-        --keep-tag "${barcode_tag},${umi_tag}" ${annotated_seqname} > ${annotated_seqname}.bam
+        --keep-tag "${barcode_tag},${umi_tag}" ${annotated_seqname} > ${annotated_seqname}_tmp.bam
+    
+    # delete empty temporary BAM files to avoid downstream errors
+    samtools view ${annotated_seqname}_tmp.bam | tail -1 > check.txt
+    if [ ! -s check.txt ]; then
+        rm ${annotated_seqname}_tmp.bam
+        rm check.txt
+    else
+        mv ${annotated_seqname}_tmp.bam ${annotated_seqname}.bam
+    fi
 
     # Write versions.yml for bedtools version in bash
     echo "!${task.process}:" > versions.yml
     samtools --version >> versions.yml
-    gawk --version >> versions.yml
     """
     stub:
     """
@@ -142,10 +168,10 @@ process READS_MAPPING_AND_FILTERING {
     label 'process_single'
     tag "${meta}, ${seqname}"
 
-    conda "conda-forge::r-argparse=2.3.1 conda-forge::r-dplyr=1.2.0 conda-forge::r-data.table=1.17.8"
+    conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-dplyr=1.2.1 conda-forge::r-data.table=1.17.8 conda-forge::r-fst=0.9.8 bioconda::bedops=2.4.42 conda-forge::r-r.utils=2.13.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/bedops_r-argparse_r-data.table_r-dplyr_pruned:802521a287a86b2e' :
-        'community.wave.seqera.io/library/bedops_r-argparse_r-data.table_r-dplyr_pruned:688bbcb08969885b' }"
+        'oras://community.wave.seqera.io/library/bedops_r-argparse_r-data.table_r-dplyr_pruned:281cdb239735258b' :
+        'community.wave.seqera.io/library/bedops_r-argparse_r-data.table_r-dplyr_pruned:d267cd1444d21620' }"
 
     input:
         tuple val(meta), val(seqname), path(annots), val(reads)
@@ -158,8 +184,10 @@ process READS_MAPPING_AND_FILTERING {
 
     script:
     """
+    which Rscript
+    bam2bed --all-reads --split < ${reads} > ${reads.baseName}.tmp
     Rscript ${script} \
-        --reads 'bam2bed --all-reads --split < ${reads}' \
+        --reads ${reads.baseName}.tmp \
         --annotations ${annots} \
         --output ${meta}_${reads.baseName}.fst \
         --distance_threshold ${distance_thr}
@@ -179,10 +207,10 @@ process IP_FILTERING {
     label 'process_single'
     tag "${meta}, ${seqname}"
 
-    conda "conda-forge::r-argparse=2.3.1 conda-forge::r-dplyr=1.2.0 conda-forge::r-data.table=1.17.8"
+    conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-dplyr=1.2.0 conda-forge::r-data.table=1.17.8 conda-forge::r-fst=0.9.8"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/bioconductor-genomicranges_r-argparse_r-data.table_r-dplyr_pruned:abda756df030d27e' :
-        'community.wave.seqera.io/library/bioconductor-genomicranges_r-argparse_r-data.table_r-dplyr_r-stringr:750d9136cb69c910' }"
+        'oras://community.wave.seqera.io/library/bioconductor-genomicranges_r-argparse_r-data.table_r-dplyr_pruned:fd4204bbfc6a5bb0' :
+        'community.wave.seqera.io/library/bioconductor-genomicranges_r-argparse_r-data.table_r-dplyr_pruned:50400465b473161f' }"
 
     input:
         tuple val(meta), val(seqname), val(mapped_reads)

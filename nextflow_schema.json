@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://raw.githubusercontent.com/nf-core/scalpel/master/nextflow_schema.json",
     "title": "nf-core/scalpel pipeline parameters",
-    "description": "isoform quantification using 3'tagged scRNA-seq data",
+    "description": "isoform quantification using 3’tagged scRNA-seq data",
     "type": "object",
     "$defs": {
         "input_output_options": {

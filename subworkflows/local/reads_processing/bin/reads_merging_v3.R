@@ -1,5 +1,7 @@
 #!/usr/bin/env Rscript
 
+require(fst)
+
 suppressPackageStartupMessages({
   library(argparse,   quietly = TRUE)
   library(data.table, quietly = TRUE)
@@ -25,15 +27,15 @@ print(args$reads)
 # ---------------------------------------------------------------------------
 message("step1...")
 reads = fread(
-  cmd = args$reads,
+  file = args$reads,
   select = c(1, 2, 3, 6, 4, 14, 15),
   col.names = c("seqnames", "start", "end", "strand", "read_id", "bc", "umi"),
   nThread = args$threads,
   fill = TRUE
 )
 reads = reads %>%
-  mutate(tags = paste(bc, umi, sep = "::")) %>%
-  select(-bc, -umi)
+  dplyr::mutate(tags = paste(bc, umi, sep = "::")) %>%
+  dplyr::select(-bc, -umi)
 reads[, read_id := sub("/.*", "", read_id)]
 reads[, c("nsplices", "start") := .(uniqueN(start), start + 1L), by = read_id]
 

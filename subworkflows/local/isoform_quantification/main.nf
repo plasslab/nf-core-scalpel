@@ -1,5 +1,11 @@
 
 
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
 workflow ISOFORM_QUANTIFICATION {
 
     take:
@@ -45,20 +51,20 @@ workflow ISOFORM_QUANTIFICATION {
     ch_versions = ch_versions.mix(EM_ALGORITHM.out.versions)
 
     // Extract DGE count matrix for each sample
-    ch_samplesheet.map{ meta, files -> tuple(meta.id, files[2]) }.join(
-        EM_ALGORITHM.out.em_results.groupTuple(by: 0)
-    ).map{
-        sample_id, sample_dge_path, em_results -> tuple(sample_id, file(sample_dge_path + "/outs/filtered_feature_bc_matrix/"), em_results)
-    }.set{ dge_inputs }
+    // ch_samplesheet.map{ meta, files -> tuple(meta.id, files[2]) }.join(
+    //     EM_ALGORITHM.out.em_results.groupTuple(by: 0)
+    // ).map{
+    //     sample_id, sample_dge_path, em_results -> tuple(sample_id, file(sample_dge_path + "/outs/filtered_feature_bc_matrix/"), em_results)
+    // }.set{ dge_inputs }
 
-    // Generate DGE matrix for each sample
-    DGE_GENERATION(
-        dge_inputs,
-        file("${workflow.projectDir}/subworkflows/local/isoform_quantification/bin/generate_DGE.R")
-    )
+    // // Generate DGE matrix for each sample
+    // DGE_GENERATION(
+    //     dge_inputs,
+    //     file("${workflow.projectDir}/subworkflows/local/isoform_quantification/bin/generate_DGE.R")
+    // )
 
-    emit:
-    versions = ch_versions                     // channel: [ versions.yml ]
+    // emit:
+    // versions = ch_versions                     // channel: [ versions.yml ]
     
 }
 
@@ -67,7 +73,7 @@ process PROBABILITY_DISTRIBUTION {
     label 'process_single'
     tag "${meta}"
 
-    conda ""
+    conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8 conda-forge::r-tidyr=1.3.2 conda-forge::r-ggplot2=3.5.1 conda-forge::r-scales=1.3.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:fcc4fd7ca6b2f422' :
         'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:71f85a249e6be098' }"
@@ -108,7 +114,7 @@ process FRAGMENT_PROBABILITY {
     label 'process_single'
     tag "${meta}, ${mapped_reads.baseName}"
 
-    conda ""
+    conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:fcc4fd7ca6b2f422' :
         'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:71f85a249e6be098' }"
@@ -139,7 +145,7 @@ process CELL_DATA_GENERATION {
     label 'process_single'
     tag "${meta}"
 
-    conda ""
+    conda "conda-forge::r-base=4.4.3 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:fcc4fd7ca6b2f422' :
         'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:71f85a249e6be098' }"
@@ -196,7 +202,7 @@ process EM_ALGORITHM {
     label 'process_single'
     tag "${meta}, ${cell_isoform_probabilities.baseName}"
 
-    conda ""
+    conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:fcc4fd7ca6b2f422' :
         'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:71f85a249e6be098' }"
@@ -226,7 +232,7 @@ process DGE_GENERATION {
     label 'process_single'
     tag "${meta}"
 
-    conda ""
+    conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:8f91f8e3b3c44c32' :
         'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:9feb5ef5dc170dba' }"

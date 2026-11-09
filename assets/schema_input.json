@@ -15,22 +15,16 @@
             },
             "fastq_1": {
                 "type": "string",
-                "format": "file-path",
-                "exists": true,
                 "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
                 "errorMessage": "FastQ file for reads 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
             },
             "fastq_2": {
                 "type": "string",
-                "format": "file-path",
-                "exists": true,
                 "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
                 "errorMessage": "FastQ file for reads 2 cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
             },
             "cranger_path": {
                 "type": "string",
-                "format": "directory-path",
-                "exists": true,
                 "errorMessage": "Path to cellranger repository must exists, be a directory and be the same name that sample_name"
             }
         },

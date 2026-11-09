@@ -19,17 +19,31 @@ workflow ANNOTATION_PROCESSING {
     SALMON_INDEX(
         genome_fasta,
         transcriptome_fasta)
-    ch_versions = ch_versions.mix(SALMON_INDEX.out.versions)
+    ch_versions = ch_versions.mix(SALMON_INDEX.out.versions_salmon)
+
+    // if test profile, specify the ${projectDir} location
+    if (workflow.profile.tokenize(',').contains('test')) {
+        ch_samplesheet.map{
+            sample_id, reads -> tuple( 
+                sample_id, 
+                [file("${projectDir}/${reads[0]}"), file("${projectDir}/${reads[1]}")]
+            )
+        }.set{ ch_samplesheet2 }
+    } else {
+        ch_samplesheet.map{ 
+            sample_id, reads -> tuple( sample_id, [reads[0], reads[1]] ) 
+        }.set{ ch_samplesheet2 }
+    }
 
     // Bulk Quantification of samples using Salmon
     SALMON_QUANT(
-        ch_samplesheet.map{ sample_id, reads -> tuple( sample_id, [reads[0], reads[1]])},
+        ch_samplesheet2,
         SALMON_INDEX.out.index,
         genome_annotation,
         transcriptome_fasta,
         0,
         'ISR')
-    ch_versions = ch_versions.mix(SALMON_QUANT.out.versions)
+    ch_versions = ch_versions.mix(SALMON_QUANT.out.versions_salmon)
 
     TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING(
         SALMON_QUANT.out.results.collate(2).transpose().toList().map{ it = it[1] },
