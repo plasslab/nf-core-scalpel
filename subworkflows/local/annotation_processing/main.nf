@@ -68,7 +68,7 @@ process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
     label 'process_single'
     tag "${genome_annotation}"
 
-    conda "bioconda::bioconductor-rtracklayer=1.66.0 conda-forge::r-dplyr=1.2.0 conda-forge::r-tidyr=1.3.2"
+    conda "bioconda::bioconductor-rtracklayer=1.66.0 conda-forge::r-dplyr=1.2.0 conda-forge::r-tidyr=1.3.2 conda-forge::r-stringr=1.5.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'oras://community.wave.seqera.io/library/bioconductor-rtracklayer_r-data.table_r-dplyr_r-tidyr:95f9946a88b84d7a' :
         'community.wave.seqera.io/library/bioconductor-rtracklayer_r-data.table_r-dplyr_r-tidyr:60d194d659530407' }"

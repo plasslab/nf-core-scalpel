@@ -114,7 +114,7 @@ process FRAGMENT_PROBABILITY {
     label 'process_single'
     tag "${meta}, ${mapped_reads.baseName}"
 
-    conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8"
+    conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8 conda-forge::r-tidyr=1.3.2 conda-forge::r-stringr=1.5.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:fcc4fd7ca6b2f422' :
         'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:71f85a249e6be098' }"
