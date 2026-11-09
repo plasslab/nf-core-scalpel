@@ -22,12 +22,17 @@ print(args$threads)
 # Load data
 # +++++++++
 reads = fst::read_fst(path = args$reads, as.data.table = T)
-ip_pos = fread(
-  file = args$ip_reference, 
-  col.names = c("seqnames", "start_ip", "end_ip", "V4", "V5", "strand_ip"),
-  nThread = as.numeric(args$threads)
-) %>%
-  filter(seqnames %in% unique(reads$seqnames))
+if(file.size(args$ip_reference) == 0){
+  #- no internal priming site on this chromosome...
+  ip_pos = data.table(seqnames = character(0))
+} else {
+  ip_pos = fread(
+    file = args$ip_reference, 
+    col.names = c("seqnames", "start_ip", "end_ip", "V4", "V5", "strand_ip"),
+    nThread = as.numeric(args$threads)
+  ) %>%
+    filter(seqnames %in% unique(reads$seqnames))
+}
 
 
 

@@ -115,11 +115,13 @@ Pipeline options
         .map {
             meta, fastq_1, fastq_2, cranger_path ->
                 def base_dir = file(params.samplesheet).parent
+                def sample_path = resolveInputPath(cranger_path, base_dir, meta.id, 'cranger_path')
+                // files: [fastq_1, fastq_2, cranger_path, bam, bai, dge_dir, barcodes]
                 [ meta.id, meta, [
                     resolveInputPath(fastq_1, base_dir, meta.id, 'fastq_1'),
                     resolveInputPath(fastq_2, base_dir, meta.id, 'fastq_2'),
-                    resolveInputPath(cranger_path, base_dir, meta.id, 'cranger_path')
-                ] ]
+                    sample_path
+                ] + resolveSampleLayout(meta.id, sample_path, params.sequencing_platform) ]
         }
         .groupTuple()
         .map { samplesheet ->
@@ -198,6 +200,49 @@ def resolveInputPath(input_path, base_dir, sample_id, column) {
         error("Samplesheet error -> sample '${sample_id}', column '${column}': '${input_path}' not found (resolved to '${resolved_path}'). Relative paths are resolved from the samplesheet directory.")
     }
     return resolved_path.toString()
+}
+
+//
+// Resolve sample layout (Cell Ranger, Cell Ranger ARC multiome, STARsolo, Drop-seq BAM)
+// returns [bam, bai, dge_dir, barcodes] ('' when not available)
+//
+def resolveSampleLayout(sample_id, sample_path, platform) {
+    def sample_dir = file(sample_path)
+    def pick = { candidates -> candidates.collect{ sample_dir.resolve(it) }.find{ it.exists() } }
+
+    // Drop-seq: path of the BAM file
+    if( platform == 'dropseq' ) {
+        def bai_dropseq = file("${sample_path}.bai")
+        return [ sample_path, bai_dropseq.exists() ? bai_dropseq.toString() : '', '', '' ]
+    }
+
+    // 10x Chromium: Cell Ranger (GEX / ARC multiome) or STARsolo output directory
+    def bam_candidates = [
+        'outs/possorted_genome_bam.bam',            // Cell Ranger count
+        'outs/gex_possorted_bam.bam',               // Cell Ranger ARC (multiome GEX)
+        'possorted_genome_bam.bam',
+        'Aligned.sortedByCoord.out.bam'             // STARsolo
+    ]
+    def dge_candidates = [
+        'outs/filtered_feature_bc_matrix',          // Cell Ranger (GEX / ARC)
+        'filtered_feature_bc_matrix',
+        'Solo.out/Gene/filtered',                   // STARsolo
+        'Solo.out/GeneFull/filtered'
+    ]
+    def bam = pick(bam_candidates)
+    def dge_dir = pick(dge_candidates)
+    if( !bam ) {
+        error("Samplesheet error -> sample '${sample_id}': no BAM file found in '${sample_path}'. Expected one of: ${bam_candidates.join(', ')}.")
+    }
+    if( !dge_dir ) {
+        error("Samplesheet error -> sample '${sample_id}': no filtered count matrix found in '${sample_path}'. Expected one of: ${dge_candidates.join(', ')}.")
+    }
+    def barcodes = ['barcodes.tsv.gz', 'barcodes.tsv'].collect{ dge_dir.resolve(it) }.find{ it.exists() }
+    if( !barcodes ) {
+        error("Samplesheet error -> sample '${sample_id}': no barcodes.tsv(.gz) in '${dge_dir}'.")
+    }
+    def bai = ["${bam}.bai", "${bam}".replaceAll(/\.bam\$/, '.bai')].collect{ file(it) }.find{ it.exists() }
+    return [ bam.toString(), bai ? bai.toString() : '', dge_dir.toString(), barcodes.toString() ]
 }
 
 //

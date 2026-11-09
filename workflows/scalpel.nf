@@ -5,6 +5,7 @@ include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_scal
 include { ANNOTATION_PROCESSING  } from '../subworkflows/local/annotation_processing/main.nf'
 include { READS_PROCESSING       } from '../subworkflows/local/reads_processing/main.nf'
 include { ISOFORM_QUANTIFICATION } from '../subworkflows/local/isoform_quantification/main.nf'
+include { APA_CHARACTERIZATION   } from '../subworkflows/local/apa_characterization/main.nf'
 
 
 workflow SCALPEL {
@@ -17,21 +18,35 @@ workflow SCALPEL {
 
     ch_versions = channel.empty()
     
-    ANNOTATION_PROCESSING(
-        ch_samplesheet,
-        genome_fasta,
-        transcriptome_fasta,
-        genome_annotation)
+    if( params.isoform_annotation ) {
+        // Fixed annotation from a previous run (<outdir>/isoform/*.annots.gz), e.g. adding samples (#31)
+        channel.fromPath("${params.isoform_annotation}/*.annots.gz", checkIfExists: true).map{
+            it = tuple(it.name - '.annots.gz', it)
+        }.set{ ch_all_transcripts }
+    } else {
+        // Annotation processing (pseudobulk quantification & isoform selection) from all samples
+        ANNOTATION_PROCESSING(
+            ch_samplesheet,
+            genome_fasta,
+            transcriptome_fasta,
+            genome_annotation)
+        ANNOTATION_PROCESSING.out.all_transcripts.set{ ch_all_transcripts }
+    }
 
     READS_PROCESSING(
         ch_samplesheet,
-        ANNOTATION_PROCESSING.out.all_transcripts
+        ch_all_transcripts
     )
 
     ISOFORM_QUANTIFICATION(
         ch_samplesheet,
         // group by sample_id [Index 0]
         READS_PROCESSING.out.reads.groupTuple(by: 0)
+    )
+
+    // Differential isoform usage (DIU_table.csv & iDGE_seurat.RDS)
+    APA_CHARACTERIZATION(
+        ISOFORM_QUANTIFICATION.out.idge
     )
 
     // Collate and save software versions

@@ -28,10 +28,24 @@ preds = lapply(list_em_files, function(x) {
 }) %>% rbindlist()
 
 #load DGE count matrix (sparse, no dense conversion #38)
+#(Cell Ranger: *.gz files, STARsolo: plain files, Cell Ranger v2: genes.tsv)
 message("Loading DGE matrix...")
-dge_counts = Matrix::readMM(file.path(args$dge, "matrix.mtx.gz")) %>% as("TsparseMatrix")
-dge_genes = fread(file.path(args$dge, "features.tsv.gz"), header = FALSE)$V2
-dge_bcs = fread(file.path(args$dge, "barcodes.tsv.gz"), header = FALSE)$V1
+dge_file = function(names){
+    candidates = file.path(args$dge, c(paste0(names, ".gz"), names))
+    if(!any(file.exists(candidates))) stop("Missing ", paste(names, collapse = "/"), " in ", args$dge)
+    return(candidates[file.exists(candidates)][1])
+}
+dge_counts = Matrix::readMM(dge_file("matrix.mtx")) %>% as("TsparseMatrix")
+dge_features = fread(dge_file(c("features.tsv", "genes.tsv")), header = FALSE, sep = "\t")
+dge_genes = dge_features$V2
+dge_bcs = fread(dge_file("barcodes.tsv"), header = FALSE)$V1
+
+#- keep 'Gene Expression' features only (e.g. 10x multiome GEX+ATAC Peaks #30)...
+if(ncol(dge_features) >= 3){
+    nb_other = sum(dge_features$V3 != "Gene Expression")
+    if(nb_other > 0) message("Discarding ", nb_other, " non 'Gene Expression' features (", paste(unique(dge_features$V3[dge_features$V3 != "Gene Expression"]), collapse = ", "), ")")
+    dge_genes[dge_features$V3 != "Gene Expression"] = NA_character_
+}
 dge = data.table(
     gene_idx = dge_counts@i + 1L,
     bc_idx = dge_counts@j + 1L,

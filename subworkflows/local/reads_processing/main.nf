@@ -5,6 +5,9 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+include { SAMTOOLS_INDEX     } from '../../../modules/nf-core/samtools/index/main'
+include { resolveInputPath   } from '../utils_nfcore_scalpel_pipeline'
+
 workflow READS_PROCESSING {
 
     take:
@@ -14,54 +17,60 @@ workflow READS_PROCESSING {
     main:
 
     ch_versions = channel.empty()
+    def barcode_tag = params.sequencing_platform == 'dropseq' ? 'XC' : 'CB'
 
-    // Parse optional barcodes whitelist
+    // Parse optional barcodes whitelist (paths relative to the whitelist csv)
     if (params.barcodes_whitelist) {
+        def whitelist_dir = file(params.barcodes_whitelist).parent
         ch_barcodes_whitelist = channel
             .fromPath(params.barcodes_whitelist)
             .splitCsv(header: true)
-            .map { row -> tuple(row.sample, file(row.barcodes)) }
+            .map { row -> tuple(row.sample, file(resolveInputPath(row.barcodes, whitelist_dir, row.sample, 'barcodes'))) }
     } else {
         ch_barcodes_whitelist = channel.empty()
     }
 
-    // Extract BAM files & defaults Barcodes tag
-    if( params.sequencing_platform == 'chromium' ) {
-        ch_samplesheet.map{ 
-            meta, 
-            files -> tuple(meta, [files[2]+'/outs/possorted_genome_bam.bam', 
-            files[2]+'/outs/filtered_feature_bc_matrix/barcodes.tsv.gz']) 
-        }.set{ ch_bam_files }
-
-    } else if( params.sequencing_platform == 'dropseq' ) {
-        ch_samplesheet.map{ meta, files -> tuple(meta, files[2]) }.set{ ch_bam_files }
-    } else {
-
-        error("Unsupported sequencing platform: ${params.sequencing_platform}. Supported platforms are: 'chromium' and 'dropseq'.")
-
-    }
+    // Extract BAM files, index & defaults Barcodes (resolved in PIPELINE_INITIALISATION)
+    // files: [fastq_1, fastq_2, cranger_path, bam, bai, dge_dir, barcodes]
+    ch_samplesheet.map{
+        meta, files -> tuple(meta, files[3], files[4], files[6] ?: "${projectDir}/assets/NO_BARCODES")
+    }.set{ ch_bam_files }
 
     // Join barcodes whitelist with BAM files if provided (override default barcodes)
-    if (params.barcodes_whitelist) {
-        ch_bam_with_barcodes = ch_bam_files
-            .map { meta, files -> tuple(meta.id, meta, files) }
-            .join(ch_barcodes_whitelist, by: 0, remainder: true)
-            .map { sample_id, meta, files, custom_barcodes ->
-                def barcodes = custom_barcodes ?: (files instanceof List ? file(files[1]) : file("NO_BARCODES"))
-                def bam = files instanceof List ? file(files[0]) : file(files)
-                tuple(meta, bam, barcodes)
-            }
-    } else {
-        ch_bam_with_barcodes = ch_bam_files.map { meta, files ->
-            def barcodes = files instanceof List ? file(files[1]) : file("NO_BARCODES")
-            def bam = files instanceof List ? file(files[0]) : file(files)
-            tuple(meta, bam, barcodes)
-        }
-    }
+    ch_bam_files.map{
+        meta, bam, bai, barcodes -> tuple(meta.id, meta, bam, bai, barcodes)
+    }.join(ch_barcodes_whitelist, by: 0, remainder: true).filter{
+        it[1] != null
+    }.map{
+        sample_id, meta, bam, bai, barcodes, custom_barcodes -> tuple(meta, bam, bai, custom_barcodes ?: file(barcodes))
+    }.branch{
+        indexed: it[2]
+        not_indexed: true
+    }.set{ ch_bam_with_barcodes }
+
+    // Index BAM files without index (e.g. STARsolo)
+    SAMTOOLS_INDEX(
+        ch_bam_with_barcodes.not_indexed.map{ meta, bam, bai, barcodes -> tuple(meta, file(bam)) }
+    )
+    ch_bam_with_barcodes.not_indexed.map{
+        meta, bam, bai, barcodes -> tuple(meta.id, meta, bam, barcodes)
+    }.join(
+        SAMTOOLS_INDEX.out.index.map{ meta, bai -> tuple(meta.id, bai) }
+    ).map{
+        sample_id, meta, bam, barcodes, bai -> tuple(meta, bam, bai.toString(), barcodes)
+    }.mix(ch_bam_with_barcodes.indexed).set{ ch_indexed_bams }
+
+    // Check chromosome names (BAM vs annotation) & barcode tags before processing (#20, #26, #36)
+    SEQNAMES_CHECK(
+        ch_indexed_bams,
+        ch_all_transcripts.map{ it = it[0] }.collect(),
+        barcode_tag
+    )
+    ch_versions = ch_versions.mix(SEQNAMES_CHECK.out.versions)
 
     // Convert BAM to BED files
     BED_CONVERSION(
-        ch_bam_with_barcodes.combine(ch_all_transcripts.map{ it=it[0] }),
+        SEQNAMES_CHECK.out.checked_bams.combine(ch_all_transcripts.map{ it=it[0] }),
         params.sequencing_platform
     )
     ch_versions = ch_versions.mix(BED_CONVERSION.out.versions)
@@ -83,10 +92,25 @@ workflow READS_PROCESSING {
     ch_versions = ch_versions.mix(READS_MAPPING_AND_FILTERING.out.versions)
 
 
+    // Split internal priming reference by chromosome (once, instead of per task)
+    IP_SPLITTING(
+        file(params.ip_reference, checkIfExists: true),
+        ch_all_transcripts.map{ it = it[0] }.collect()
+    )
+    ch_versions = ch_versions.mix(IP_SPLITTING.out.versions)
+    IP_SPLITTING.out.ip_chrs.flatten().map{
+        it = tuple(it.name - '.ip.txt', it)
+    }.set{ ch_ip_chrs }
+
     // Filter reads associated to internal priming positions
+    READS_MAPPING_AND_FILTERING.out.mapped_reads.map{
+        meta, seqname, mapped_reads -> tuple(seqname, meta, mapped_reads)
+    }.combine(ch_ip_chrs, by: 0).map{
+        seqname, meta, mapped_reads, ip_chr -> tuple(meta, seqname, mapped_reads, ip_chr)
+    }.set{ reads_and_ips }
+
     IP_FILTERING(
-        READS_MAPPING_AND_FILTERING.out.mapped_reads,
-        params.ip_reference,
+        reads_and_ips,
         file("${projectDir}/subworkflows/local/reads_processing/bin/ip_filtering.R"),
         params.distance_ip
     )
@@ -100,6 +124,101 @@ workflow READS_PROCESSING {
 
 
 
+process SEQNAMES_CHECK {
+    label 'process_single'
+    tag "${meta.id}"
+
+    conda "bioconda::samtools=1.23.1"
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'oras://community.wave.seqera.io/library/samtools:1.23.1--5cb989b890127f7a' :
+        'community.wave.seqera.io/library/samtools:1.23.1--d76a06ff3aefee52' }"
+
+    input:
+        tuple val(meta), val(bam_file), val(bai_file), path(barcodes_file)
+        val(annotated_seqnames)
+        val(barcode_tag)
+
+    output:
+        tuple val(meta), val(bam_file), val(bai_file), path(barcodes_file), emit: checked_bams
+        path('versions.yml'), emit: versions
+
+    script:
+    """
+    #- chromosome names of BAM & annotation...
+    samtools view -H ${bam_file} | awk -F'\\t' '\$1=="@SQ"{ for(i=2;i<=NF;i++) if(\$i ~ /^SN:/) print substr(\$i,4) }' | sort -u > bam_seqnames.txt
+    printf "%s\\n" ${annotated_seqnames.join(' ')} | sort -u > annot_seqnames.txt
+    comm -12 bam_seqnames.txt annot_seqnames.txt > shared_seqnames.txt
+    if [ ! -s shared_seqnames.txt ]; then
+        echo "ERROR -> sample '${meta.id}': no chromosome name shared between the BAM file and the annotation (GTF)." >&2
+        echo "  BAM: \$(head -5 bam_seqnames.txt | tr '\\n' ' ')..." >&2
+        echo "  GTF: \$(head -5 annot_seqnames.txt | tr '\\n' ' ')..." >&2
+        echo "  Use references from the same source as the BAM (e.g. Ensembl '1' vs GENCODE/UCSC 'chr1')." >&2
+        exit 1
+    fi
+    echo "${meta.id}: \$(wc -l < shared_seqnames.txt) chromosomes shared between BAM & annotation"
+
+    #- barcode tag (CB for 10x / STARsolo, XC for Drop-seq)...
+    nb_tagged=\$(samtools view ${bam_file} 2>/dev/null | head -n 10000 | grep -c "${barcode_tag}:Z:" || true)
+    if [ "\$nb_tagged" -eq 0 ]; then
+        echo "ERROR -> sample '${meta.id}': no '${barcode_tag}' cell barcode tag found in the first 10,000 BAM records." >&2
+        echo "  STARsolo: run with '--outSAMattributes CB UB' (and --outSAMtype BAM SortedByCoordinate)." >&2
+        exit 1
+    fi
+
+    echo "!${task.process}:" > versions.yml
+    samtools --version | head -1 >> versions.yml
+    """
+    stub:
+    """
+    echo "R: stub" > versions.yml
+    """
+}
+
+
+process IP_SPLITTING {
+    label 'process_single'
+    tag "${ip_reference}"
+
+    conda "conda-forge::gawk=5.3.1"
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/35/35c889f53d969f55720d9292b6418744f68b405781c91e674ba98d5e8802a4c1/data' :
+        'community.wave.seqera.io/library/bedops_samtools_gawk:2ceaacb8a83d256c' }"
+
+    input:
+        path(ip_reference)
+        val(annotated_seqnames)
+
+    output:
+        path("*.ip.txt"), emit: ip_chrs
+        path('versions.yml'), emit: versions
+
+    script:
+    def reader = ip_reference.name.endsWith('.tar.gz') ? "tar -xzOf ${ip_reference}" : "gzip -cdf ${ip_reference}"
+    """
+    #- one (possibly empty) file per annotated chromosome...
+    printf "%s\\n" ${annotated_seqnames.join(' ')} | sort -u > annot_seqnames.txt
+    while read chr; do : > \${chr}.ip.txt; done < annot_seqnames.txt
+
+    #- split internal priming sites (.polyA.track / ipriming_sites.bed, plain, .gz or .tar.gz)...
+    ${reader} | gawk -F'\\t' 'NR==FNR{ keep[\$1]=1; next } (\$1 in keep){ print > (\$1".ip.txt") }' annot_seqnames.txt -
+
+    if [ -z "\$(find . -name '*.ip.txt' -size +0 | head -1)" ]; then
+        echo "ERROR -> internal priming reference '${ip_reference}': no chromosome name shared with the annotation (GTF)." >&2
+        echo "  GTF: \$(head -5 annot_seqnames.txt | tr '\\n' ' ')..." >&2
+        exit 1
+    fi
+
+    echo "!${task.process}:" > versions.yml
+    gawk --version | head -1 >> versions.yml
+    """
+    stub:
+    """
+    touch XXX.ip.txt
+    echo "R: stub" > versions.yml
+    """
+}
+
+
 process BED_CONVERSION {
     label 'process_single'
     tag "${meta.id}, ${annotated_seqname}"
@@ -110,7 +229,7 @@ process BED_CONVERSION {
         'community.wave.seqera.io/library/samtools:1.23.1--d76a06ff3aefee52' }"
 
     input:
-        tuple val(meta), val(bam_file), path(barcodes_file), val(annotated_seqname)
+        tuple val(meta), val(bam_file), val(bai_file), path(barcodes_file), val(annotated_seqname)
         val sequencing_platform
 
     output:
@@ -127,7 +246,7 @@ process BED_CONVERSION {
     # Convert BAM to BED
     samtools view \
         -b ${bam_file} \
-        -X ${bam_file}.bai ${filter_cmd} \
+        -X ${bai_file} ${filter_cmd} \
         --keep-tag "${barcode_tag},${umi_tag}" ${annotated_seqname} > ${annotated_seqname}_tmp.bam
     
     # delete empty temporary BAM files to avoid downstream errors
@@ -200,8 +319,7 @@ process IP_FILTERING {
         'community.wave.seqera.io/library/bioconductor-genomicranges_r-argparse_r-data.table_r-dplyr_pruned:50400465b473161f' }"
 
     input:
-        tuple val(meta), val(seqname), val(mapped_reads)
-        path(ip_reference)
+        tuple val(meta), val(seqname), val(mapped_reads), path(ip_reference)
         path(script)
         val(distance_threshold)
 

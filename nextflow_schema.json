@@ -10,7 +10,7 @@
             "type": "object",
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
-            "required": ["samplesheet", "genome", "transcriptome", "gtf", "outdir", "ip_reference"],
+            "required": ["samplesheet", "outdir", "ip_reference"],
             "properties": {
                 "input": {
                     "type": "string",
@@ -47,8 +47,8 @@
                     "type": "string",
                     "format": "file-path",
                     "exists": true,
-                    "description": "Path to the genome FASTA file.",
-                    "help_text": "Provide the path to the genome FASTA file that will be used for read alignment. Ensure that the file is properly formatted and accessible.",
+                    "description": "Optional genome FASTA file, used as salmon decoys.",
+                    "help_text": "Not used by the original SCALPEL. When provided, the genome sequences are added as decoys to the salmon transcriptome index (selective alignment with decoys). Leave empty to reproduce the original SCALPEL pseudobulk quantification.",
                     "fa_icon": "fas fa-dna"
                 },
                 "transcriptome": {
@@ -82,6 +82,22 @@
                     "description": "Optional CSV file mapping samples to custom barcode whitelist files.",
                     "help_text": "A comma-separated file with columns: sample,barcodes. Each barcodes file should contain one barcode per line. When provided, reads will be filtered to retain only those matching the specified barcodes.",
                     "fa_icon": "fas fa-barcode"
+                },
+                "clusters": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Optional cell clusters file for differential isoform usage.",
+                    "help_text": "Tab or comma separated, 3 columns (header optional): sample name (as in the samplesheet), cell barcode (as in the BAM/count matrix, e.g. AAACCTGAGCTTATCG-1), cluster. Without it, samples are compared.",
+                    "fa_icon": "fas fa-object-group"
+                },
+                "isoform_annotation": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "exists": true,
+                    "description": "Optional directory of a previous run's selected isoforms (<outdir>/isoform/*.annots.gz).",
+                    "help_text": "Reuse a fixed isoform annotation instead of rebuilding it from the samples (skips salmon pseudobulk & isoform selection), e.g. to add new samples to an existing analysis. --transcriptome/--gtf/--genome are then not needed.",
+                    "fa_icon": "fas fa-lock"
                 },
                 "ip_reference": {
                     "type": "string",

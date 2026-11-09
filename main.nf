@@ -49,11 +49,16 @@ workflow {
         params.show_hidden)
 
 
+    // Check annotation inputs (not needed with a fixed --isoform_annotation)
+    if( !params.isoform_annotation && (!params.transcriptome || !params.gtf) ) {
+        error("Missing parameters -> --transcriptome and --gtf are required (unless --isoform_annotation is provided).")
+    }
+
     NFCORE_SCALPEL (
         PIPELINE_INITIALISATION.out.samplesheet,
-        channel.fromPath(params.genome, checkIfExists: true).collect(),
-        channel.fromPath(params.transcriptome, checkIfExists: true).collect(),
-        channel.fromPath(params.gtf, checkIfExists: true).collect())
+        params.genome ? channel.fromPath(params.genome, checkIfExists: true).collect() : channel.value([]),
+        params.isoform_annotation ? channel.value([]) : channel.fromPath(params.transcriptome, checkIfExists: true).collect(),
+        params.isoform_annotation ? channel.value([]) : channel.fromPath(params.gtf, checkIfExists: true).collect())
     
     PIPELINE_COMPLETION (
         params.email,
