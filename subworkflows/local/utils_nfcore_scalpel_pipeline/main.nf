@@ -113,15 +113,19 @@ Pipeline options
     Channel
         .fromList(samplesheetToList(params.samplesheet, "${projectDir}/assets/schema_input.json"))
         .map {
-            meta, fastq_1, fastq_2, cranger_path ->
+            meta, fastq_1, fastq_2, cranger_path, dge ->
                 def base_dir = file(params.samplesheet).parent
                 def sample_path = resolveInputPath(cranger_path, base_dir, meta.id, 'cranger_path')
+                if( params.sequencing_platform == 'dropseq' && !dge ) {
+                    error("Samplesheet error -> sample '${meta.id}': column 'dge' (Drop-seq DGE count matrix) is required with --sequencing_platform dropseq.")
+                }
+                def dge_path = dge ? resolveInputPath(dge, base_dir, meta.id, 'dge') : ''
                 // files: [fastq_1, fastq_2, cranger_path, bam, bai, dge_dir, barcodes]
                 [ meta.id, meta, [
                     resolveInputPath(fastq_1, base_dir, meta.id, 'fastq_1'),
                     resolveInputPath(fastq_2, base_dir, meta.id, 'fastq_2'),
                     sample_path
-                ] + resolveSampleLayout(meta.id, sample_path, params.sequencing_platform) ]
+                ] + resolveSampleLayout(meta.id, sample_path, params.sequencing_platform, dge_path) ]
         }
         .groupTuple()
         .map { samplesheet ->
@@ -203,17 +207,21 @@ def resolveInputPath(input_path, base_dir, sample_id, column) {
 }
 
 //
-// Resolve sample layout (Cell Ranger, Cell Ranger ARC multiome, STARsolo, Drop-seq BAM)
-// returns [bam, bai, dge_dir, barcodes] ('' when not available)
+// Resolve sample layout (Cell Ranger, Cell Ranger ARC multiome, STARsolo, Drop-seq BAM + DGE)
+// returns [bam, bai, dge, barcodes] ('' when not available)
 //
-def resolveSampleLayout(sample_id, sample_path, platform) {
+def resolveSampleLayout(sample_id, sample_path, platform, dge_path) {
     def sample_dir = file(sample_path)
     def pick = { candidates -> candidates.collect{ sample_dir.resolve(it) }.find{ it.exists() } }
+    def find_bai = { bam_path -> ["${bam_path}.bai", "${bam_path}".replaceAll('\\.bam$', '.bai')].findAll{ it != "${bam_path}" }.collect{ file(it) }.find{ it.exists() } }
 
-    // Drop-seq: path of the BAM file
+    // Drop-seq: BAM file (XC/XM tags) + DGE count matrix (Drop-seq tools); cells = DGE barcodes
     if( platform == 'dropseq' ) {
-        def bai_dropseq = file("${sample_path}.bai")
-        return [ sample_path, bai_dropseq.exists() ? bai_dropseq.toString() : '', '', '' ]
+        if( sample_dir.isDirectory() || !sample_path.endsWith('.bam') ) {
+            error("Samplesheet error -> sample '${sample_id}': with --sequencing_platform dropseq, column 'cranger_path' must be the BAM file (got '${sample_path}').")
+        }
+        def bai_dropseq = find_bai(sample_path)
+        return [ sample_path, bai_dropseq ? bai_dropseq.toString() : '', dge_path, '' ]
     }
 
     // 10x Chromium: Cell Ranger (GEX / ARC multiome) or STARsolo output directory
@@ -241,7 +249,7 @@ def resolveSampleLayout(sample_id, sample_path, platform) {
     if( !barcodes ) {
         error("Samplesheet error -> sample '${sample_id}': no barcodes.tsv(.gz) in '${dge_dir}'.")
     }
-    def bai = ["${bam}.bai", "${bam}".replaceAll('\\.bam$', '.bai')].findAll{ it != "${bam}" }.collect{ file(it) }.find{ it.exists() }
+    def bai = find_bai(bam)
     return [ bam.toString(), bai ? bai.toString() : '', dge_dir.toString(), barcodes.toString() ]
 }
 

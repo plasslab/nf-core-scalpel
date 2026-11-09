@@ -28,29 +28,41 @@ preds = lapply(list_em_files, function(x) {
 }) %>% rbindlist()
 
 #load DGE count matrix (sparse, no dense conversion #38)
-#(Cell Ranger: *.gz files, STARsolo: plain files, Cell Ranger v2: genes.tsv)
 message("Loading DGE matrix...")
-dge_file = function(names){
-    candidates = file.path(args$dge, c(paste0(names, ".gz"), names))
-    if(!any(file.exists(candidates))) stop("Missing ", paste(names, collapse = "/"), " in ", args$dge)
-    return(candidates[file.exists(candidates)][1])
-}
-dge_counts = Matrix::readMM(dge_file("matrix.mtx")) %>% as("TsparseMatrix")
-dge_features = fread(dge_file(c("features.tsv", "genes.tsv")), header = FALSE, sep = "\t")
-dge_genes = dge_features$V2
-dge_bcs = fread(dge_file("barcodes.tsv"), header = FALSE)$V1
+if(dir.exists(args$dge)){
+    #- 10x format directory (Cell Ranger: *.gz files, STARsolo: plain files, Cell Ranger v2: genes.tsv)...
+    dge_file = function(names){
+        candidates = file.path(args$dge, c(paste0(names, ".gz"), names))
+        if(!any(file.exists(candidates))) stop("Missing ", paste(names, collapse = "/"), " in ", args$dge)
+        return(candidates[file.exists(candidates)][1])
+    }
+    dge_counts = Matrix::readMM(dge_file("matrix.mtx")) %>% as("TsparseMatrix")
+    dge_features = fread(dge_file(c("features.tsv", "genes.tsv")), header = FALSE, sep = "\t")
+    dge_genes = dge_features$V2
+    dge_bcs = fread(dge_file("barcodes.tsv"), header = FALSE)$V1
 
-#- keep 'Gene Expression' features only (e.g. 10x multiome GEX+ATAC Peaks #30)...
-if(ncol(dge_features) >= 3){
-    nb_other = sum(dge_features$V3 != "Gene Expression")
-    if(nb_other > 0) message("Discarding ", nb_other, " non 'Gene Expression' features (", paste(unique(dge_features$V3[dge_features$V3 != "Gene Expression"]), collapse = ", "), ")")
-    dge_genes[dge_features$V3 != "Gene Expression"] = NA_character_
+    #- keep 'Gene Expression' features only (e.g. 10x multiome GEX+ATAC Peaks #30)...
+    if(ncol(dge_features) >= 3){
+        nb_other = sum(dge_features$V3 != "Gene Expression")
+        if(nb_other > 0) message("Discarding ", nb_other, " non 'Gene Expression' features (", paste(unique(dge_features$V3[dge_features$V3 != "Gene Expression"]), collapse = ", "), ")")
+        dge_genes[dge_features$V3 != "Gene Expression"] = NA_character_
+    }
+    dge = data.table(
+        gene_idx = dge_counts@i + 1L,
+        bc_idx = dge_counts@j + 1L,
+        counts = dge_counts@x
+    )
+} else {
+    #- Drop-seq tools DGE (GENE + one column per cell barcode), converted column by column...
+    dge_counts = fread(args$dge)
+    dge_genes = dge_counts[[1]]
+    dge_bcs = colnames(dge_counts)[-1]
+    dge = rbindlist(lapply(seq_along(dge_bcs), function(j){
+        bc_counts = dge_counts[[j + 1]]
+        nz = which(bc_counts != 0)
+        return(data.table(gene_idx = nz, bc_idx = j, counts = as.numeric(bc_counts[nz])))
+    }))
 }
-dge = data.table(
-    gene_idx = dge_counts@i + 1L,
-    bc_idx = dge_counts@j + 1L,
-    counts = dge_counts@x
-)
 rm(dge_counts)
 
 

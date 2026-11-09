@@ -78,8 +78,8 @@ process PROBABILITY_DISTRIBUTION {
 
     conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8 conda-forge::r-tidyr=1.3.2 conda-forge::r-ggplot2=3.5.1 conda-forge::r-scales=1.3.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:fcc4fd7ca6b2f422' :
-        'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:71f85a249e6be098' }"
+        'oras://community.wave.seqera.io/library/r-base_r-argparse_r-data.table_r-dplyr_pruned:eccd7a6e471b877c' :
+        'community.wave.seqera.io/library/r-base_r-argparse_r-data.table_r-dplyr_pruned:6aa969298cb360df' }"
 
     input:
         tuple val(meta), path(mapped_reads)
@@ -101,8 +101,9 @@ process PROBABILITY_DISTRIBUTION {
         --OUTPUT_PDF ${meta}.pdf \
         --threads ${task.cpus}
     
-    # Write versions.yml for bedtools version in bash
-    echo "!${task.process}:" > versions.yml
+    # Write versions.yml
+    echo '"${task.process}":' > versions.yml
+    Rscript -e 'v = c(base = as.character(getRversion()), sapply(c("data.table", "dplyr", "fst", "ggplot2"), function(p) as.character(packageVersion(p)))); cat(paste0("    r-", tolower(names(v)), ": ", v, "\\n"), file = "versions.yml", append = TRUE, sep = "")' 
     """
     stub:
     """
@@ -119,8 +120,8 @@ process FRAGMENT_PROBABILITY {
 
     conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8 conda-forge::r-tidyr=1.3.2 conda-forge::r-stringr=1.5.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:fcc4fd7ca6b2f422' :
-        'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:71f85a249e6be098' }"
+        'oras://community.wave.seqera.io/library/r-base_r-argparse_r-data.table_r-dplyr_pruned:beb90925512dcf02' :
+        'community.wave.seqera.io/library/r-base_r-argparse_r-data.table_r-dplyr_pruned:33d5c4529c5ead95' }"
 
     input:
         tuple val(meta), path(probabilities), path(mapped_reads)
@@ -138,8 +139,9 @@ process FRAGMENT_PROBABILITY {
         --output ${meta}_${mapped_reads.baseName}.frag.fst \
         --threads ${task.cpus}
 
-    # Write versions.yml for bedtools version in bash
-    echo "!${task.process}:" > versions.yml
+    # Write versions.yml
+    echo '"${task.process}":' > versions.yml
+    Rscript -e 'v = c(base = as.character(getRversion()), sapply(c("data.table", "dplyr", "fst"), function(p) as.character(packageVersion(p)))); cat(paste0("    r-", tolower(names(v)), ": ", v, "\\n"), file = "versions.yml", append = TRUE, sep = "")' 
     """
 }
 
@@ -150,8 +152,8 @@ process CELL_DATA_GENERATION {
 
     conda "conda-forge::r-base=4.4.3 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:fcc4fd7ca6b2f422' :
-        'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:71f85a249e6be098' }"
+        'oras://community.wave.seqera.io/library/r-base_r-data.table_r-dplyr_r-fst:cc9686c619b6bf7a' :
+        'community.wave.seqera.io/library/r-base_r-data.table_r-dplyr_r-fst:7d28f8f9dc2b7888' }"
 
     input:
         tuple val(meta), file(isoform_probabilities)
@@ -193,8 +195,7 @@ process CELL_DATA_GENERATION {
         c(
             '"${task.process}":',
             paste0('    R: "', R.version.string, '"'),
-            paste0('    dplyr: "', packageVersion("dplyr"), '"'),
-            '"'
+            paste0('    dplyr: "', packageVersion("dplyr"), '"')
         ), "versions.yml")
     """
 }
@@ -207,8 +208,8 @@ process EM_ALGORITHM {
 
     conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:fcc4fd7ca6b2f422' :
-        'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:71f85a249e6be098' }"
+        'oras://community.wave.seqera.io/library/r-base_r-argparse_r-data.table_r-dplyr_r-fst:e79dc183dca8c207' :
+        'community.wave.seqera.io/library/r-base_r-argparse_r-data.table_r-dplyr_r-fst:c22aa6005af410db' }"
 
     input:
         tuple val(meta), path(cell_isoform_probabilities)
@@ -224,8 +225,9 @@ process EM_ALGORITHM {
         --cell ${cell_isoform_probabilities} \
         --output_path ${cell_isoform_probabilities.baseName}_em_results.fst
 
-    # Write versions.yml for bedtools version in bash
-    echo "!${task.process}:" > versions.yml
+    # Write versions.yml
+    echo '"${task.process}":' > versions.yml
+    Rscript -e 'v = c(base = as.character(getRversion()), sapply(c("data.table", "dplyr", "fst"), function(p) as.character(packageVersion(p)))); cat(paste0("    r-", tolower(names(v)), ": ", v, "\\n"), file = "versions.yml", append = TRUE, sep = "")' 
     """
 }
 
@@ -237,8 +239,8 @@ process DGE_GENERATION {
 
     conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-data.table=1.17.8 conda-forge::r-dplyr=1.1.4 conda-forge::r-fst=0.9.8 conda-forge::r-matrix=1.7_6 conda-forge::r-r.utils=2.13.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:8f91f8e3b3c44c32' :
-        'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-fst_pruned:9feb5ef5dc170dba' }"
+        'oras://community.wave.seqera.io/library/r-base_r-argparse_r-data.table_r-dplyr_pruned:c4165245638f3c1b' :
+        'community.wave.seqera.io/library/r-base_r-argparse_r-data.table_r-dplyr_pruned:513a1d31b2feb181' }"
 
     input:
         tuple val(meta), path(sample_dge_path), path(em_results)
@@ -255,8 +257,9 @@ process DGE_GENERATION {
         --pred ./ \
         --output ${meta}_iDGE
 
-    # Write versions.yml from bash
-    echo "!${task.process}:" > versions.yml
+    # Write versions.yml
+    echo '"${task.process}":' > versions.yml
+    Rscript -e 'v = c(base = as.character(getRversion()), sapply(c("data.table", "fst", "Matrix"), function(p) as.character(packageVersion(p)))); cat(paste0("    r-", tolower(names(v)), ": ", v, "\\n"), file = "versions.yml", append = TRUE, sep = "")' 
     """
     stub:
     """

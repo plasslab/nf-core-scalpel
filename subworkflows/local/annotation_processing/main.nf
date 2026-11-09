@@ -68,10 +68,10 @@ process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
     label 'process_single'
     tag "${genome_annotation}"
 
-    conda "bioconda::bioconductor-rtracklayer=1.66.0 conda-forge::r-dplyr=1.2.0 conda-forge::r-tidyr=1.3.2 conda-forge::r-stringr=1.5.1"
+    conda "conda-forge::r-base=4.4.3 bioconda::bioconductor-rtracklayer=1.66.0 conda-forge::r-dplyr=1.2.0 conda-forge::r-tidyr=1.3.2 conda-forge::r-stringr=1.5.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/bioconductor-rtracklayer_r-data.table_r-dplyr_r-tidyr:95f9946a88b84d7a' :
-        'community.wave.seqera.io/library/bioconductor-rtracklayer_r-data.table_r-dplyr_r-tidyr:60d194d659530407' }"
+        'oras://community.wave.seqera.io/library/r-base_bioconductor-rtracklayer_r-dplyr_r-tidyr_r-stringr:4632629d2ddfef49' :
+        'community.wave.seqera.io/library/r-base_bioconductor-rtracklayer_r-dplyr_r-tidyr_r-stringr:68563737921154c4' }"
 
     input:
         file quant_files
@@ -208,10 +208,10 @@ process ISOFORM_SELECTION{
     label 'process_single'
     tag "${gtf_entries.baseName}"
 
-    conda "conda-forge::r-argparse=2.3.1 conda-forge::r-tidyr=1.3.2 conda-forge::r-dplyr=1.1.4 conda-forge::r-data.table=1.17.8"
+    conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-tidyr=1.3.2 conda-forge::r-dplyr=1.1.4 conda-forge::r-data.table=1.17.8"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-tidyr:130e888376e46c19' :
-        'community.wave.seqera.io/library/r-argparse_r-data.table_r-dplyr_r-tidyr:40ad9129fa7b497b' }"
+        'oras://community.wave.seqera.io/library/r-base_r-argparse_r-tidyr_r-dplyr_r-data.table:91bda81fa3909649' :
+        'community.wave.seqera.io/library/r-base_r-argparse_r-tidyr_r-dplyr_r-data.table:ec5de7e1233d91ec' }"
 
     input:
         file gtf_entries
@@ -234,9 +234,9 @@ process ISOFORM_SELECTION{
     gzip ${gtf_entries.baseName}.annots
 
 
-    # Write versions.yml for R version in bash
-    echo "!${task.process}:" > versions.yml
-    echo "    R: \"\$(Rscript -e 'cat(R.version.string)')\"" >> versions.yml
+    # Write versions.yml
+    echo '"${task.process}":' > versions.yml
+    Rscript -e 'v = c(base = as.character(getRversion()), sapply(c("data.table", "dplyr"), function(p) as.character(packageVersion(p)))); cat(paste0("    r-", tolower(names(v)), ": ", v, "\\n"), file = "versions.yml", append = TRUE, sep = "")' 
     """
     stub:
     """

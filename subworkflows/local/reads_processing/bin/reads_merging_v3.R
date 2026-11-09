@@ -34,6 +34,8 @@ reads = fread(
 reads = reads %>%
   dplyr::mutate(tags = paste(bc, umi, sep = "::")) %>%
   dplyr::select(-bc, -umi)
+#discard pcr replicates (as original mapping_filtering.R)
+reads = unique(reads, by = c("seqnames", "start", "end", "strand", "tags"))
 reads[, seg_id := .I]
 reads[, read_id := sub("/.*", "", read_id)]
 reads[, c("nsplices", "start") := .(uniqueN(start), start + 1L), by = read_id]

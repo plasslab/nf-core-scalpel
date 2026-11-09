@@ -24,6 +24,9 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
   Read with `Seurat::Read10X("<sample>_iDGE", gene.column = 1)`.
 - `differential/iDGE_seurat.RDS`: Seurat object of all samples (cells named `<sample>_<barcode>`,
   metadata `orig.ident` = sample, `Barcodes` = cell barcode, `Clusters`).
+- `filtered_bams/<sample>_filtered.bam(.bai)`: reads kept by SCALPEL after all filtering steps
+  (e.g. coverage visualization of the quantified isoforms).
+- `pipeline_info/nf_core_scalpel_software_versions.yml`: versions of all tools & R packages used.
 - `differential/DIU_table.csv`: differential isoform usage (tab-separated) between clusters
   (`--clusters`) or samples: aggregated counts per group, filters (`thr.abund`, `thr.var`),
   chi-squared `p.value`, `statistic` and BH `p.value.adjusted`.
@@ -38,7 +41,7 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 - `salmon/`: pseudobulk salmon quantification per sample.
 - `transcript/`, `isoform/`: per-chromosome annotation with averaged TPM and selected isoforms
   (`isoform/*.annots.gz`, reusable with `--isoform_annotation`).
-- `bed/`, `reads/`, `ip/`: reads per chromosome, reads mapped to isoforms, internal priming filtered reads.
+- `bed/<sample>/`, `reads/`, `ip/`: reads per chromosome (PCR duplicates removed), reads mapped to isoforms, internal priming filtered reads.
 - `probability/<sample>.prob|.pdf`: read distance distribution to the 3' ends.
 - `fragment/`, `cell/`, `em/`: fragment probabilities, cell chunks and EM isoform abundances.
 

@@ -31,10 +31,26 @@ workflow READS_PROCESSING {
     }
 
     // Extract BAM files, index & defaults Barcodes (resolved in PIPELINE_INITIALISATION)
-    // files: [fastq_1, fastq_2, cranger_path, bam, bai, dge_dir, barcodes]
-    ch_samplesheet.map{
-        meta, files -> tuple(meta, files[3], files[4], files[6] ?: "${projectDir}/assets/NO_BARCODES")
-    }.set{ ch_bam_files }
+    // files: [fastq_1, fastq_2, cranger_path, bam, bai, dge, barcodes]
+    if( params.sequencing_platform == 'dropseq' ) {
+        // Drop-seq: cells = barcodes of the DGE count matrix
+        DGE_BARCODES(
+            ch_samplesheet.map{ meta, files -> tuple(meta, file(files[5])) }
+        )
+        ch_versions = ch_versions.mix(DGE_BARCODES.out.versions)
+        ch_samplesheet.map{
+            meta, files -> tuple(meta.id, meta, files[3], files[4])
+        }.join(
+            DGE_BARCODES.out.barcodes.map{ meta, barcodes -> tuple(meta.id, barcodes) }
+        ).map{
+            sample_id, meta, bam, bai, barcodes -> tuple(meta, bam, bai, barcodes)
+        }.set{ ch_bam_files }
+    } else {
+        // 10x Chromium: cells = filtered barcodes (Cell Ranger / STARsolo)
+        ch_samplesheet.map{
+            meta, files -> tuple(meta, files[3], files[4], file(files[6] ?: "${projectDir}/assets/NO_BARCODES"))
+        }.set{ ch_bam_files }
+    }
 
     // Join barcodes whitelist with BAM files if provided (override default barcodes)
     ch_bam_files.map{
@@ -42,7 +58,7 @@ workflow READS_PROCESSING {
     }.join(ch_barcodes_whitelist, by: 0, remainder: true).filter{
         it[1] != null
     }.map{
-        sample_id, meta, bam, bai, barcodes, custom_barcodes -> tuple(meta, bam, bai, custom_barcodes ?: file(barcodes))
+        sample_id, meta, bam, bai, barcodes, custom_barcodes -> tuple(meta, bam, bai, custom_barcodes ?: barcodes)
     }.branch{
         indexed: it[2]
         not_indexed: true
@@ -119,9 +135,48 @@ workflow READS_PROCESSING {
 
     emit:
     reads = IP_FILTERING.out.filtered_mapped_reads
+    chr_bams = BED_CONVERSION.out.bed_files     // channel: [ val(seqname), val(meta), path(chr.bam) ]
     versions = ch_versions                     // channel: [ versions.yml ]
 }
 
+
+
+process DGE_BARCODES {
+    label 'process_single'
+    tag "${meta.id}"
+
+    conda "conda-forge::gawk=5.3.1"
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'oras://community.wave.seqera.io/library/gawk:5.3.1--55cafbff4f74c897' :
+        'community.wave.seqera.io/library/gawk:5.3.1--d5d074ad9f29be71' }"
+
+    input:
+        tuple val(meta), path(dge)
+
+    output:
+        tuple val(meta), path("${meta.id}_barcodes.txt"), emit: barcodes
+        path('versions.yml'), emit: versions
+
+    script:
+    """
+    #- cell barcodes = DGE header (GENE, barcode_1, barcode_2, ...)
+    { gzip -cdf ${dge} || true; } | head -n 1 | tr '\\t' '\\n' | tail -n +2 > ${meta.id}_barcodes.txt
+    if [ ! -s ${meta.id}_barcodes.txt ]; then
+        echo "ERROR -> sample '${meta.id}': no cell barcode found in the header of the DGE file '${dge}'." >&2
+        exit 1
+    fi
+    echo "${meta.id}: \$(wc -l < ${meta.id}_barcodes.txt) cells in DGE"
+
+    # Write versions.yml
+    echo '"${task.process}":' > versions.yml
+    echo "    gawk: \$(gawk --version | head -1 | sed 's/GNU Awk //; s/,.*//')" >> versions.yml
+    """
+    stub:
+    """
+    touch ${meta.id}_barcodes.txt
+    echo "R: stub" > versions.yml
+    """
+}
 
 
 process SEQNAMES_CHECK {
@@ -130,8 +185,8 @@ process SEQNAMES_CHECK {
 
     conda "bioconda::samtools=1.23.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/samtools:1.23.1--5cb989b890127f7a' :
-        'community.wave.seqera.io/library/samtools:1.23.1--d76a06ff3aefee52' }"
+        'oras://community.wave.seqera.io/library/samtools:1.23.1--ddf9171cf37418c2' :
+        'community.wave.seqera.io/library/samtools:1.23.1--51a9c8a523bed249' }"
 
     input:
         tuple val(meta), val(bam_file), val(bai_file), path(barcodes_file)
@@ -165,8 +220,9 @@ process SEQNAMES_CHECK {
         exit 1
     fi
 
-    echo "!${task.process}:" > versions.yml
-    samtools --version | head -1 >> versions.yml
+    # Write versions.yml
+    echo '"${task.process}":' > versions.yml
+    echo "    samtools: \$(samtools --version | head -1 | sed 's/samtools //')" >> versions.yml
     """
     stub:
     """
@@ -181,8 +237,8 @@ process IP_SPLITTING {
 
     conda "conda-forge::gawk=5.3.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/35/35c889f53d969f55720d9292b6418744f68b405781c91e674ba98d5e8802a4c1/data' :
-        'community.wave.seqera.io/library/bedops_samtools_gawk:2ceaacb8a83d256c' }"
+        'oras://community.wave.seqera.io/library/gawk:5.3.1--55cafbff4f74c897' :
+        'community.wave.seqera.io/library/gawk:5.3.1--d5d074ad9f29be71' }"
 
     input:
         path(ip_reference)
@@ -208,8 +264,9 @@ process IP_SPLITTING {
         exit 1
     fi
 
-    echo "!${task.process}:" > versions.yml
-    gawk --version | head -1 >> versions.yml
+    # Write versions.yml
+    echo '"${task.process}":' > versions.yml
+    echo "    gawk: \$(gawk --version | head -1 | sed 's/GNU Awk //; s/,.*//')" >> versions.yml
     """
     stub:
     """
@@ -225,8 +282,8 @@ process BED_CONVERSION {
 
     conda "bioconda::samtools=1.23.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/samtools:1.23.1--5cb989b890127f7a' :
-        'community.wave.seqera.io/library/samtools:1.23.1--d76a06ff3aefee52' }"
+        'oras://community.wave.seqera.io/library/samtools:1.23.1--ddf9171cf37418c2' :
+        'community.wave.seqera.io/library/samtools:1.23.1--51a9c8a523bed249' }"
 
     input:
         tuple val(meta), val(bam_file), val(bai_file), path(barcodes_file), val(annotated_seqname)
@@ -243,11 +300,14 @@ process BED_CONVERSION {
     def barcode_input = has_barcodes ? (barcodes_file.toString().endsWith('.gz') ? "<(gunzip -c ${barcodes_file})" : "${barcodes_file}") : ""
     def filter_cmd = has_barcodes ? "-D ${barcode_tag}:${barcode_input}" : ""
     """
-    # Convert BAM to BED
+    #Filter reads (cells, tags) by chromosome
     samtools view \
         -b ${bam_file} \
         -X ${bai_file} ${filter_cmd} \
-        --keep-tag "${barcode_tag},${umi_tag}" ${annotated_seqname} > ${annotated_seqname}_tmp.bam
+        --keep-tag "${barcode_tag},${umi_tag}" ${annotated_seqname} | samtools sort -@ ${task.cpus} > tmp.bam
+    #Remove all PCR duplicates ... (as original SCALPEL bam_splitting)
+    samtools markdup tmp.bam ${annotated_seqname}_tmp.bam -r --barcode-tag ${barcode_tag} --barcode-tag ${umi_tag}
+    rm tmp.bam
     
     # delete empty temporary BAM files to avoid downstream errors
     samtools view ${annotated_seqname}_tmp.bam | tail -1 > check.txt
@@ -258,9 +318,9 @@ process BED_CONVERSION {
         mv ${annotated_seqname}_tmp.bam ${annotated_seqname}.bam
     fi
 
-    # Write versions.yml for bedtools version in bash
-    echo "!${task.process}:" > versions.yml
-    samtools --version >> versions.yml
+    # Write versions.yml
+    echo '"${task.process}":' > versions.yml
+    echo "    samtools: \$(samtools --version | head -1 | sed 's/samtools //')" >> versions.yml
     """
     stub:
     """
@@ -276,8 +336,8 @@ process READS_MAPPING_AND_FILTERING {
 
     conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-dplyr=1.2.1 conda-forge::r-data.table=1.17.8 conda-forge::r-fst=0.9.8 bioconda::bedops=2.4.42 conda-forge::r-r.utils=2.13.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/bedops_r-argparse_r-data.table_r-dplyr_pruned:281cdb239735258b' :
-        'community.wave.seqera.io/library/bedops_r-argparse_r-data.table_r-dplyr_pruned:d267cd1444d21620' }"
+        'oras://community.wave.seqera.io/library/r-base_r-argparse_r-dplyr_r-data.table_pruned:7d88a113d2eb0730' :
+        'community.wave.seqera.io/library/r-base_r-argparse_r-dplyr_r-data.table_pruned:9e005428b384d2ec' }"
 
     input:
         tuple val(meta), val(seqname), path(annots), val(reads)
@@ -298,8 +358,10 @@ process READS_MAPPING_AND_FILTERING {
         --distance_threshold ${distance_thr}
     rm -f ${reads.baseName}.tmp
     
-    # Write versions.yml for bedtools version in bash
-    echo "!${task.process}:" > versions.yml
+    # Write versions.yml
+    echo '"${task.process}":' > versions.yml
+    Rscript -e 'v = c(base = as.character(getRversion()), sapply(c("data.table", "dplyr", "fst"), function(p) as.character(packageVersion(p)))); cat(paste0("    r-", tolower(names(v)), ": ", v, "\\n"), file = "versions.yml", append = TRUE, sep = "")' 
+    echo "    bedops: \$(bam2bed --version 2>&1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+' | head -1)" >> versions.yml
     """
     stub:
     """
@@ -315,8 +377,8 @@ process IP_FILTERING {
 
     conda "conda-forge::r-base=4.4.3 conda-forge::r-argparse=2.3.1 conda-forge::r-dplyr=1.2.0 conda-forge::r-data.table=1.17.8 conda-forge::r-fst=0.9.8 conda-forge::r-stringr=1.5.1 conda-forge::r-r.utils=2.13.0 bioconda::bioconductor-genomicranges=1.58.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/bioconductor-genomicranges_r-argparse_r-data.table_r-dplyr_pruned:fd4204bbfc6a5bb0' :
-        'community.wave.seqera.io/library/bioconductor-genomicranges_r-argparse_r-data.table_r-dplyr_pruned:50400465b473161f' }"
+        'oras://community.wave.seqera.io/library/r-base_r-argparse_r-dplyr_r-data.table_pruned:42636a19761d44d9' :
+        'community.wave.seqera.io/library/r-base_r-argparse_r-dplyr_r-data.table_pruned:122f7e640136e794' }"
 
     input:
         tuple val(meta), val(seqname), val(mapped_reads), path(ip_reference)
@@ -336,8 +398,9 @@ process IP_FILTERING {
         --threshold_dist ${distance_threshold} \
         --threads ${task.cpus}
     
-    # Write versions.yml for bedtools version in bash
-    echo "!${task.process}:" > versions.yml
+    # Write versions.yml
+    echo '"${task.process}":' > versions.yml
+    Rscript -e 'v = c(base = as.character(getRversion()), sapply(c("data.table", "dplyr", "fst", "GenomicRanges"), function(p) as.character(packageVersion(p)))); cat(paste0("    r-", tolower(names(v)), ": ", v, "\\n"), file = "versions.yml", append = TRUE, sep = "")' 
     """
     stub:
     """

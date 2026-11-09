@@ -103,5 +103,32 @@ for SAMPLE in ${SAMPLES}; do
     echo "${SAMPLE},barcodes/${SAMPLE}_barcodes.txt" >> ${OUT}/barcodes_whitelist.csv
 done
 
+#- Drop-seq version of the same data (XC/XM tags, dense DGE), for -profile test_dropseq...
+echo "Drop-seq dataset..."
+OUT_DS=${OUT}_dropseq
+mkdir -p ${OUT_DS}/bams ${OUT_DS}/dges
+echo "sample,fastq_1,fastq_2,cranger_path,dge" > ${OUT_DS}/samplesheet.csv
+for SAMPLE in ${SAMPLES}; do
+    OUTS=${OUT}/cellranger/${SAMPLE}/outs
+    #- BAM: CB:Z:<bc>-1 -> XC:Z:<bc> ; UB -> XM (unindexed, as Drop-seq tools output)...
+    samtools view -h ${OUTS}/possorted_genome_bam.bam | \
+        sed -E 's/\tCB:Z:([ACGTN]+)-1/\tXC:Z:\1/; s/\tUB:Z:/\tXM:Z:/' | \
+        samtools view -b -o ${OUT_DS}/bams/${SAMPLE}.bam -
+    #- DGE: dense GENE x barcodes table...
+    python3 - ${OUTS}/filtered_feature_bc_matrix ${OUT_DS}/dges/${SAMPLE}.dge.txt.gz <<'PY2'
+import sys, gzip
+import scipy.io
+src, out = sys.argv[1:3]
+mtx = scipy.io.mmread(gzip.open(f"{src}/matrix.mtx.gz")).toarray()
+genes = [l.rstrip("\n").split("\t")[1] for l in gzip.open(f"{src}/features.tsv.gz", "rt")]
+bcs = [l.strip().removesuffix("-1") for l in gzip.open(f"{src}/barcodes.tsv.gz", "rt")]
+with gzip.open(out, "wt") as f:
+    f.write("GENE\t" + "\t".join(bcs) + "\n")
+    for g, row in zip(genes, mtx):
+        f.write(g + "\t" + "\t".join(str(int(x)) for x in row) + "\n")
+PY2
+    echo "${SAMPLE},../light/reads/${SAMPLE}_R1.fastq.gz,../light/reads/${SAMPLE}_R2.fastq.gz,bams/${SAMPLE}.bam,dges/${SAMPLE}.dge.txt.gz" >> ${OUT_DS}/samplesheet.csv
+done
+
 echo "Done."
-du -sh ${OUT}
+du -sh ${OUT} ${OUT_DS}

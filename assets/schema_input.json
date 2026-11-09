@@ -25,7 +25,11 @@
             },
             "cranger_path": {
                 "type": "string",
-                "errorMessage": "Path to cellranger repository must exists, be a directory and be the same name that sample_name"
+                "errorMessage": "chromium: path of the Cell Ranger / Cell Ranger ARC / STARsolo sample directory ; dropseq: path of the BAM file"
+            },
+            "dge": {
+                "type": "string",
+                "errorMessage": "dropseq only: path of the Drop-seq tools DGE count matrix (GENE + one column per cell barcode, .txt or .txt.gz)"
             }
         },
         "required": ["sample", "fastq_1", "fastq_2", "cranger_path"]

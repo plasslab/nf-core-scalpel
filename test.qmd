@@ -62,11 +62,11 @@ if(!file.exists(SAMTOOLS)){
 }
 
 #- helpers...
-run_pipeline = function(name, extra_args, samplesheet = "tests/data/light/samplesheet.csv"){
+run_pipeline = function(name, extra_args, samplesheet = "tests/data/light/samplesheet.csv", profile = "test,conda"){
   log_file = file.path(TMP, paste0(name, ".log"))
   status = system2(
     "nextflow",
-    c("run", PROJECT_DIR, "-profile", "test,conda", "--outdir", file.path(TMP, name), "-resume",
+    c("run", PROJECT_DIR, "-profile", profile, "--outdir", file.path(TMP, name), "-resume",
       "--samplesheet", normalizePath(samplesheet), extra_args),
     stdout = log_file, stderr = log_file, env = "NXF_ANSI_LOG=false"
   )
@@ -75,7 +75,8 @@ run_pipeline = function(name, extra_args, samplesheet = "tests/data/light/sample
 read_idge = function(idge_dir){
   m = readMM(file.path(idge_dir, "matrix.mtx.gz"))
   rownames(m) = fread(file.path(idge_dir, "features.tsv.gz"), header = FALSE)$V1
-  colnames(m) = fread(file.path(idge_dir, "barcodes.tsv.gz"), header = FALSE)$V1
+  #- barcodes without 10x '-1' suffix (comparison with Drop-seq barcodes)...
+  colnames(m) = sub("-1$", "", fread(file.path(idge_dir, "barcodes.tsv.gz"), header = FALSE)$V1)
   return(as.matrix(m)[order(rownames(m)), order(colnames(m)), drop = FALSE])
 }
 same_idge = function(dir_a, dir_b){
@@ -177,6 +178,28 @@ if(file.exists(diu_file)){
   diu = fread(diu_file)
   check("output", "DIU table compares the samples (one column per sample)", all(SAMPLES %in% colnames(diu)))
   knitr::kable(head(diu[order(p.value.adjusted)], 6), digits = 4)
+}
+
+#- filtered BAMs (reads kept by SCALPEL)...
+for(s in SAMPLES){
+  bam = file.path(OUTDIR, "filtered_bams", paste0(s, "_filtered.bam"))
+  check("output", paste0(s, ": filtered BAM & index written"), file.exists(bam) & file.exists(paste0(bam, ".bai")))
+  if(file.exists(bam)){
+    nb_bam = as.integer(system(paste(SAMTOOLS, "view -c", bam), intern = TRUE))
+    nb_ids = uniqueN(rbindlist(lapply(list.files(file.path(OUTDIR, "ip"), pattern = paste0("^", s, "_.*ip_filtered.fst$"), full.names = TRUE), fst_to_dt))$read_id)
+    check("output", paste0(s, ": filtered BAM holds exactly the kept reads (", nb_bam, ")"), nb_bam == nb_ids)
+  }
+}
+
+#- software versions report...
+versions_file = list.files(file.path(OUTDIR, "pipeline_info"), pattern = "versions.yml$", full.names = TRUE)
+check("output", "software versions report written", length(versions_file) == 1)
+if(length(versions_file) == 1){
+  versions = readLines(versions_file)
+  check("output", "versions report covers local processes & nf-core modules",
+    all(c("SALMON_QUANT:", "DGE_GENERATION:", "DIFFERENTIAL_ISOFORM_USAGE:", "Workflow:") %in% trimws(versions)))
+  check("output", "versions report is valid YAML (no '!' tags, 'key: value' entries)",
+    !any(grepl("^!", versions)) & all(grepl(":", versions[nzchar(trimws(versions))])))
 }
 ```
 
@@ -395,6 +418,22 @@ if(res$status == 0){
     same_idge(file.path(res$outdir, "dge/SRR6129050_iDGE"), file.path(OUTDIR, "dge/SRR6129050_iDGE")))
   check("#30", "multiome layout: Peaks discarded, iDGE identical to GEX-only",
     same_idge(file.path(res$outdir, "dge/SRR6129051_iDGE"), file.path(OUTDIR, "dge/SRR6129051_iDGE")))
+} else {
+  cat(tail(res$log, 30), sep = "\n")
+}
+```
+
+```{r scenario-dropseq}
+#| eval: !expr params$scenarios
+#- same light data in Drop-seq format (XC/XM tags, unindexed BAM, dense DGE)...
+res = run_pipeline("dropseq", c(), "tests/data/light_dropseq/samplesheet.csv", profile = "test_dropseq,conda")
+check("dropseq", "run with --sequencing_platform dropseq completes", res$status == 0)
+if(res$status == 0){
+  for(s in SAMPLES){
+    check("dropseq", paste0(s, ": Drop-seq iDGE identical to the 10x Chromium iDGE"),
+      same_idge(file.path(res$outdir, "dge", paste0(s, "_iDGE")), file.path(OUTDIR, "dge", paste0(s, "_iDGE"))))
+  }
+  check("dropseq", "DIU table written", file.exists(file.path(res$outdir, "differential/DIU_table.csv")))
 } else {
   cat(tail(res$log, 30), sep = "\n")
 }

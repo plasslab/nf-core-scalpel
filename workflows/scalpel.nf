@@ -31,26 +31,36 @@ workflow SCALPEL {
             transcriptome_fasta,
             genome_annotation)
         ANNOTATION_PROCESSING.out.all_transcripts.set{ ch_all_transcripts }
+        ch_versions = ch_versions.mix(ANNOTATION_PROCESSING.out.versions)
     }
 
     READS_PROCESSING(
         ch_samplesheet,
         ch_all_transcripts
     )
+    ch_versions = ch_versions.mix(READS_PROCESSING.out.versions)
 
     ISOFORM_QUANTIFICATION(
         ch_samplesheet,
         // group by sample_id [Index 0]
         READS_PROCESSING.out.reads.groupTuple(by: 0)
     )
+    ch_versions = ch_versions.mix(ISOFORM_QUANTIFICATION.out.versions)
 
     // Differential isoform usage (DIU_table.csv & iDGE_seurat.RDS)
     APA_CHARACTERIZATION(
-        ISOFORM_QUANTIFICATION.out.idge
+        ISOFORM_QUANTIFICATION.out.idge,
+        READS_PROCESSING.out.reads,
+        READS_PROCESSING.out.chr_bams
     )
+    ch_versions = ch_versions.mix(APA_CHARACTERIZATION.out.versions)
 
     // Collate and save software versions
-    softwareVersionsToYAML(ch_versions)
+    // (local processes: versions.yml files ; nf-core modules: 'versions' topic tuples)
+    ch_versions.filter{ it instanceof java.nio.file.Path }.map{ it.text }.mix(
+        channel.topic('versions').map{ process, tool, version -> "\"${process}\":\n    ${tool}: ${version}" }
+    ).set{ ch_versions_yaml }
+    softwareVersionsToYAML(ch_versions_yaml)
         .collectFile(
             storeDir: "${params.outdir}/pipeline_info",
             name: 'nf_core_'  +  'scalpel_software_'  + 'versions.yml',

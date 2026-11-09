@@ -31,6 +31,7 @@ SRR6129051,reads/SRR6129051_R1.fastq.gz,reads/SRR6129051_R2.fastq.gz,cellranger/
 | `fastq_1`      | R1 FASTQ (`.fastq.gz`/`.fq.gz`). For 10x, R1 holds barcode + UMI.                                                             |
 | `fastq_2`      | R2 FASTQ (cDNA read).                                                                                                        |
 | `cranger_path` | 10x: the sample output **directory** (see layouts below). Drop-seq (`--sequencing_platform dropseq`): the tagged BAM **file**. |
+| `dge`          | Drop-seq only (required): the Drop-seq tools DGE count matrix (`.txt`/`.txt.gz`). Leave out for 10x.                         |
 
 - Paths can be absolute or **relative to the samplesheet directory** (not the launch directory).
 - Every path is checked when the pipeline starts; a missing file stops the run with a
@@ -51,7 +52,21 @@ The pipeline detects the layout of each sample directory:
   used, the ATAC `Peaks` features are discarded automatically. No renaming of files is needed.
 - **STARsolo**: run STAR with `--outSAMtype BAM SortedByCoordinate --outSAMattributes CB UB`
   (cell barcode / UMI tags are required). A missing BAM index is created automatically.
-- **Drop-seq**: BAM produced by Drop-seq tools (`XC`/`XM` tags).
+- **Drop-seq** (`--sequencing_platform dropseq`): see below.
+
+### Drop-seq samplesheet
+
+```csv title="samplesheet.csv"
+sample,fastq_1,fastq_2,cranger_path,dge
+S1,reads/S1_R1.fastq.gz,reads/S1_R2.fastq.gz,bams/S1.bam,dges/S1.dge.txt.gz
+```
+
+- `cranger_path`: coordinate-sorted BAM from Drop-seq tools with the `XC` (cell barcode) and
+  `XM` (UMI) tags; an index is created if missing.
+- `dge`: the Drop-seq tools digital expression matrix (`DigitalExpression`): tab-separated,
+  first column `GENE` (gene symbols), then one column per cell barcode.
+- The cells analysed are the barcodes of the DGE header (as the filtered barcodes for 10x),
+  unless a `--barcodes_whitelist` is given.
 
 ## Reference files
 
@@ -150,7 +165,8 @@ nextflow run . -profile test,conda --outdir results_test
 ```
 
 Runs on a light dataset (GSE104556, chr17:14-16Mb, 2 samples; `tests/data/light`) in a few
-minutes. `test.qmd` (Quarto) runs it and the regression tests of the reported issues:
+minutes. `-profile test_dropseq,conda` runs the same data in Drop-seq format
+(`tests/data/light_dropseq`). `test.qmd` (Quarto) runs it and the regression tests of the reported issues:
 
 ```bash
 quarto render test.qmd
