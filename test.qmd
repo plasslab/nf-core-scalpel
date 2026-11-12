@@ -367,6 +367,25 @@ if(status == 0){
 }
 ```
 
+## Isoform collapsing (3' end profile)
+
+Isoforms whose 3' ends are within `--distance_3end` and whose exons are identical (genomic splice
+sites) within `--distance_profile` of the furthest 3' end are collapsed; the representative (highest
+TPM) is extended to the furthest 3' end of its group, as in the original SCALPEL
+(`tests/unit/isoform_collapsing_test.R`).
+
+```{r isoform-collapsing}
+out_dir = file.path(TMP, "isoform_collapsing")
+status = run_rscript(c("tests/unit/isoform_collapsing_test.R", file.path(PROJECT_DIR, "subworkflows/local/annotation_processing/bin/isoform_selection.R"), out_dir), file.path(TMP, "isoform_collapsing.log"))
+check("collapse", "isoform collapsing test runs", status == 0)
+if(status == 0){
+  res = fread(file.path(out_dir, "checks.tsv"))
+  for(i in seq_len(nrow(res))) check("collapse", res$case[i], res$result[i] == "PASS")
+} else {
+  cat(readLines(file.path(TMP, "isoform_collapsing.log")), sep = "\n")
+}
+```
+
 ## EM run to convergence
 
 With the original stopping rule (abundance change < 0.01, 30 iterations), the EM stops before an

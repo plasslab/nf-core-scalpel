@@ -130,6 +130,15 @@ GSE104556 test data, 200 nt cuts fragments removed despite a 3' end peak on thei
 ~78% compared to 60 nt, at the cost of skipping sites closer than 200 nt. Use
 `--distance_ip 60` to reproduce the original behaviour.
 
+## Isoform selection (collapsing)
+
+Within each gene, isoforms whose 3' ends are within `--distance_3end` (default 50 nt) of each other
+are compared over the last `--distance_profile` nt (default 600) from the furthest 3' end. Isoforms
+with identical exons in this window (same genomic splice sites) cannot be told apart by 3'-tagged
+reads and are collapsed into the most expressed one (pseudobulk TPM), whose terminal exon is
+extended to the furthest 3' end of the group (`isoform/*.annots.gz`, column `transcript_collapseds`).
+Exons of the same length at different genomic positions are different isoforms (not collapsed).
+
 ## Isoform quantification (EM)
 
 For each cell and gene, the isoform abundances are estimated by an EM algorithm from the

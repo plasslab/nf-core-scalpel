@@ -72,14 +72,19 @@ groupIsoformEndProfile <- function(
         dplyr::filter(startR_adj < distance_profile) %>%
         dplyr::mutate(
             rel_5prime_boundary = endR_adj + 1,
-            rel_5prime_boundary_capped = pmin(rel_5prime_boundary, distance_profile)
+            rel_5prime_boundary_capped = pmin(rel_5prime_boundary, distance_profile),
+            #- genomic splice sites in the window (as the original SCALPEL, which compares genomic exon coordinates):
+            #- exons of the same length at different genomic positions are different isoforms...
+            genomic_3prime = ifelse(startR == 0, "", ifelse(strand == "+", end, start)),
+            genomic_5prime = ifelse(rel_5prime_boundary < distance_profile, ifelse(strand == "+", start, end), ""),
+            exon_signature = paste(rel_5prime_boundary_capped, genomic_3prime, genomic_5prime, sep = ":")
         )
-    
+
     profile_clusters <- exons_with_rel_boundary %>%
         dplyr::group_by(gene_id, cluster_3end, transcript_name) %>%
         dplyr::arrange(exon_number) %>%
         dplyr::summarise(
-            profile_signature = paste(rel_5prime_boundary_capped, collapse = "_"),
+            profile_signature = paste(exon_signature, collapse = "_"),
             n_exons_in_window = n(),
             strand = dplyr::first(strand),
             .groups = "drop"
@@ -140,8 +145,28 @@ rep_isoforms = result %>%
     filter(TPM_perc == max(TPM_perc)) %>%
     slice_head(n = 1)
 
+#- furthest 3' end of each group of collapsed isoforms...
+group_ends = result %>%
+    filter(startR == 0) %>%
+    group_by(transcript_collapseds) %>%
+    summarise(furthest_3end = ifelse(first(strand) == "+", max(end), min(start)), .groups = "drop")
+
+#- representative terminal exon extended to the furthest 3' end of its collapsed isoforms (original SCALPEL),
+#- so that reads of the longer collapsed isoforms stay on the representative (relative coordinates shifted)...
 result = result %>%
-    filter(transcript_name %in% rep_isoforms$transcript_name)
+    filter(transcript_name %in% rep_isoforms$transcript_name) %>%
+    left_join(group_ends, by = "transcript_collapseds") %>%
+    group_by(transcript_name) %>%
+    mutate(extension = ifelse(strand == "+", furthest_3end - end[startR == 0], start[startR == 0] - furthest_3end)) %>%
+    ungroup() %>%
+    mutate(
+        end = ifelse(strand == "+" & startR == 0, furthest_3end, end),
+        start = ifelse(strand == "-" & startR == 0, furthest_3end, start),
+        width = end - start,
+        startR = ifelse(startR == 0, 0, startR + extension),
+        endR = endR + extension
+    ) %>%
+    select(-furthest_3end, -extension)
 
 # Write output
 fwrite(result, file = args$output, sep = "\t")
