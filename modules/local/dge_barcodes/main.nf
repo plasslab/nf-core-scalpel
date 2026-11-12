@@ -2,10 +2,10 @@ process DGE_BARCODES {
     label 'process_single'
     tag "${meta.id}"
 
-    conda "conda-forge::gawk=5.3.1"
+    conda "conda-forge::gawk=5.3.1 conda-forge::gzip=1.15 conda-forge::findutils=4.10.0 conda-forge::tar=1.35"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/gawk:5.3.1--55cafbff4f74c897' :
-        'community.wave.seqera.io/library/gawk:5.3.1--d5d074ad9f29be71' }"
+        'oras://community.wave.seqera.io/library/gawk_gzip_findutils_tar:8851949c471d65d2' :
+        'community.wave.seqera.io/library/gawk_gzip_findutils_tar:82f953873e50fc8f' }"
 
     input:
         tuple val(meta), path(dge)

@@ -2,10 +2,10 @@ process BED_CONVERSION {
     label 'process_single'
     tag "${meta.id}, ${annotated_seqname}"
 
-    conda "bioconda::samtools=1.25"
+    conda "bioconda::samtools=1.25 conda-forge::gzip=1.15"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/samtools:1.25--f798bb3cb27e958b' :
-        'community.wave.seqera.io/library/samtools:1.25--a253eb9139fd1fcd' }"
+        'oras://community.wave.seqera.io/library/samtools_gzip:6fb2a253051675fd' :
+        'community.wave.seqera.io/library/samtools_gzip:e11e69970cba236e' }"
 
     input:
         tuple val(meta), path(bam_file), path(bai_file), path(barcodes_file), val(annotated_seqname)
