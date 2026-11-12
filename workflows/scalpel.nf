@@ -27,7 +27,7 @@ workflow SCALPEL {
         // Annotation processing (pseudobulk quantification & isoform selection) from all samples
         ANNOTATION_PROCESSING(
             ch_samplesheet,
-            genome_fasta,
+            params.salmon_decoys ? genome_fasta : channel.value([]),
             transcriptome_fasta,
             genome_annotation)
         ANNOTATION_PROCESSING.out.all_transcripts.set{ ch_all_transcripts }
@@ -36,7 +36,9 @@ workflow SCALPEL {
 
     READS_PROCESSING(
         ch_samplesheet,
-        ch_all_transcripts
+        ch_all_transcripts,
+        genome_fasta,
+        genome_annotation
     )
     ch_versions = ch_versions.mix(READS_PROCESSING.out.versions)
 

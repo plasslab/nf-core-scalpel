@@ -10,7 +10,7 @@
             "type": "object",
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
-            "required": ["samplesheet", "outdir", "ip_reference"],
+            "required": ["samplesheet", "outdir"],
             "properties": {
                 "input": {
                     "type": "string",
@@ -47,8 +47,14 @@
                     "type": "string",
                     "format": "file-path",
                     "exists": true,
-                    "description": "Optional genome FASTA file, used as salmon decoys.",
-                    "help_text": "Not used by the original SCALPEL. When provided, the genome sequences are added as decoys to the salmon transcriptome index (selective alignment with decoys). Leave empty to reproduce the original SCALPEL pseudobulk quantification.",
+                    "description": "Genome FASTA file, used to build the internal priming reference (required unless --ip_reference is provided).",
+                    "help_text": "Plain or gzipped FASTA, with the same chromosome names as the GTF and BAM files. Internal priming sites (genomic A-rich regions) are detected on the annotated chromosomes when --ip_reference is not provided. With --salmon_decoys, the genome sequences are also added as decoys to the salmon transcriptome index.",
+                    "fa_icon": "fas fa-dna"
+                },
+                "salmon_decoys": {
+                    "type": "boolean",
+                    "description": "Add the --genome sequences as decoys to the salmon transcriptome index.",
+                    "help_text": "Not used by the original SCALPEL (default: false). Requires --genome.",
                     "fa_icon": "fas fa-dna"
                 },
                 "transcriptome": {
@@ -103,8 +109,8 @@
                     "type": "string",
                     "format": "file-path",
                     "exists": true,
-                    "description": "Path to the internal priming reference file.",
-                    "help_text": "Path to a tar.gz archive containing the internal priming reference track used to filter reads during reads processing.",
+                    "description": "Optional pre-built internal priming reference, used instead of building it from --genome.",
+                    "help_text": "Internal priming sites track (chromosome, start, end, ., ., strand), plain, .gz or .tar.gz, e.g. the SCALPEL mm10/hg38 references. When not provided, it is generated from --genome and saved to <outdir>/ip_reference/ip_reference.track.gz.",
                     "fa_icon": "fas fa-filter"
                 }
             }

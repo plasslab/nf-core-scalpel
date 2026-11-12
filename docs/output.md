@@ -41,6 +41,8 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 - `salmon/`: pseudobulk salmon quantification per sample.
 - `transcript/`, `isoform/`: per-chromosome annotation with averaged TPM and selected isoforms
   (`isoform/*.annots.gz`, reusable with `--isoform_annotation`).
+- `ip_reference/ip_reference.track.gz`: internal priming reference generated from `--genome`
+  (only without `--ip_reference`), reusable with `--ip_reference`.
 - `bed/<sample>/`, `reads/`, `ip/`: reads per chromosome (PCR duplicates removed), reads mapped to isoforms, internal priming filtered reads.
 - `probability/<sample>.prob|.pdf`: read distance distribution to the 3' ends.
 - `fragment/`, `cell/`, `em/`: fragment probabilities, cell chunks and EM isoform abundances.

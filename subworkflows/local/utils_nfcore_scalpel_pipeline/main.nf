@@ -94,6 +94,8 @@ Pipeline options
   distance_profile    : ${params.distance_profile}
   distance_3end       : ${params.distance_3end}
   distance_ip         : ${params.distance_ip}
+  ip_reference        : ${params.ip_reference ?: 'generated from --genome'}
+  salmon_decoys       : ${params.salmon_decoys}
   gene_fraction       : ${params.gene_fraction}
   binsize             : ${params.binsize}
   barcodes_whitelist  : ${params.barcodes_whitelist ?: 'not provided'}

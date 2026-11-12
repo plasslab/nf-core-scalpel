@@ -10,6 +10,7 @@ include { SAMTOOLS_INDEX     } from '../../../modules/nf-core/samtools/index/mai
 include { DGE_BARCODES                               } from '../../../modules/local/dge_barcodes/main'
 include { SEQNAMES_CHECK                             } from '../../../modules/local/seqnames_check/main'
 include { IP_SPLITTING                               } from '../../../modules/local/ip_splitting/main'
+include { IP_REFERENCE_GENERATION                    } from '../../../modules/local/ip_reference_generation/main'
 include { BED_CONVERSION                             } from '../../../modules/local/bed_conversion/main'
 include { READS_MAPPING_AND_FILTERING                } from '../../../modules/local/reads_mapping_and_filtering/main'
 include { IP_FILTERING                               } from '../../../modules/local/ip_filtering/main'
@@ -19,6 +20,8 @@ workflow READS_PROCESSING {
     take:
     ch_samplesheet // channel: samplesheet read in from --input
     ch_all_transcripts // path: all transcripts preprocessed from ANNOTATION_PROCESSING
+    genome_fasta // channel: genome FASTA file read in from --genome (internal priming reference generation)
+    genome_annotation // channel: genome annotation GTF file read in from --gtf (empty with --isoform_annotation)
 
     main:
 
@@ -123,13 +126,27 @@ workflow READS_PROCESSING {
     ch_versions = ch_versions.mix(READS_MAPPING_AND_FILTERING.out.versions)
 
 
-    // Split internal priming reference by chromosome (once, instead of per task)
-    IP_SPLITTING(
-        file(params.ip_reference, checkIfExists: true),
-        ch_all_transcripts.map{ it = it[0] }.collect()
-    )
-    ch_versions = ch_versions.mix(IP_SPLITTING.out.versions)
-    IP_SPLITTING.out.ip_chrs.flatten().map{
+    if( params.ip_reference ) {
+        // Split internal priming reference by chromosome (once, instead of per task)
+        IP_SPLITTING(
+            file(params.ip_reference, checkIfExists: true),
+            ch_all_transcripts.map{ it = it[0] }.collect()
+        )
+        ch_versions = ch_versions.mix(IP_SPLITTING.out.versions)
+        IP_SPLITTING.out.ip_chrs.set{ ch_ip_files }
+    } else {
+        // Generate internal priming reference from the genome (A-rich regions, as mm10/hg38 SCALPEL references)
+        // (chromosomes from the GTF: starts with the run, without waiting for the isoform selection)
+        IP_REFERENCE_GENERATION(
+            genome_fasta,
+            genome_annotation,
+            params.isoform_annotation ? ch_all_transcripts.map{ it = it[0] }.collect() : channel.value([]),
+            file("${projectDir}/subworkflows/local/reads_processing/bin/ip_reference_generation.R")
+        )
+        ch_versions = ch_versions.mix(IP_REFERENCE_GENERATION.out.versions)
+        IP_REFERENCE_GENERATION.out.ip_chrs.set{ ch_ip_files }
+    }
+    ch_ip_files.flatten().map{
         it = tuple(it.name - '.ip.txt', it)
     }.set{ ch_ip_chrs }
 

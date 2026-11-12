@@ -64,12 +64,15 @@ SRR6129051,/path/to/SRR6129051_S1_L001_R1_001.fastq.gz,/path/to/SRR6129051_S1_L0
 nextflow run nf-core/scalpel \
    -profile <docker/singularity/.../institute> \
    --samplesheet samplesheet.csv \
-   --genome /path/to/genome.fa \
    --transcriptome /path/to/transcriptome.fa \
    --gtf /path/to/annotation.gtf \
-   --ip_reference /path/to/ip_reference.track.gz \
+   --genome /path/to/genome.fa \
    --outdir <OUTDIR>
 ```
+
+The internal priming reference is built from the genome FASTA (`--genome`). A pre-built
+reference (e.g. SCALPEL mm10/hg38 below, or `<outdir>/ip_reference/ip_reference.track.gz` of a
+previous run) can be given instead with `--ip_reference`.
 
 ### Optional parameters
 
@@ -86,7 +89,7 @@ nextflow run nf-core/scalpel \
 
 ### Reference files
 
-SCALPEL requires an internal priming (IP) annotation file. Pre-built references are available:
+SCALPEL builds its internal priming (IP) reference from the genome FASTA (`--genome`). Pre-built references can be given instead with `--ip_reference`:
 
 - [Mouse IP annotation (mm10)](https://zenodo.org/records/15664563/files/mm10_polya.track.tar.gz?download=1)
 - [Human IP annotation (GRCh38)](https://zenodo.org/records/15717592/files/hg38_ipriming_sites.bed.tar.gz?download=1)

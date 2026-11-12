@@ -54,6 +54,14 @@ workflow {
         error("Missing parameters -> --transcriptome and --gtf are required (unless --isoform_annotation is provided).")
     }
 
+    // Check internal priming inputs (reference track, or genome FASTA to generate it)
+    if( !params.ip_reference && !params.genome ) {
+        error("Missing parameters -> --ip_reference or --genome is required (the internal priming reference is generated from the genome when --ip_reference is not provided).")
+    }
+    if( params.salmon_decoys && !params.genome ) {
+        error("Missing parameters -> --salmon_decoys requires --genome.")
+    }
+
     NFCORE_SCALPEL (
         PIPELINE_INITIALISATION.out.samplesheet,
         params.genome ? channel.fromPath(params.genome, checkIfExists: true).collect() : channel.value([]),

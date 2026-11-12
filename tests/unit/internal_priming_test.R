@@ -7,6 +7,8 @@ args = commandArgs(TRUE)
 SCRIPT = args[1]
 OUT = args[2]
 dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
+#- ip_filtering.R writes <chr>.ipdb in the working directory...
+setwd(OUT)
 
 #- isoforms: X (+, exon 1000-2000, 3' end 2000) ; Y (-, exon 5000-6000, 3' end 5000)
 annots = data.table(seqnames = "chr1", start = c(1000, 5000), end = c(2000, 6000), strand = c("+", "-"),

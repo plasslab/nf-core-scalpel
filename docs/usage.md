@@ -74,8 +74,9 @@ S1,reads/S1_R1.fastq.gz,reads/S1_R2.fastq.gz,bams/S1.bam,dges/S1.dge.txt.gz
 | ----------------- | ------------------------------------------------------------------------------------------------------------ |
 | `--transcriptome` | Transcript FASTA (e.g. `gencode.vM21.transcripts.fa.gz`). **Not** the genome FASTA.                           |
 | `--gtf`           | Matching annotation GTF (same release as the transcriptome).                                                  |
-| `--ip_reference`  | Internal priming sites (see below).                                                                          |
-| `--genome`        | Optional. Genome FASTA added as salmon decoys. Not used by the original SCALPEL; leave empty to reproduce it. |
+| `--genome`        | Genome FASTA, used to build the internal priming reference (default, see below).                             |
+| `--ip_reference`  | Optional. Pre-built internal priming sites, used instead of building them from `--genome` (see below).        |
+| `--salmon_decoys` | Optional. Adds the `--genome` sequences as salmon decoys. Not used by the original SCALPEL (default: false).  |
 
 ### Chromosome names must match
 
@@ -94,6 +95,27 @@ download: `<genome>.polyA.track` (e.g. `mm10_polya.track.gz`) or
 the same information (tab-separated: chromosome, start, end, ., ., strand) and can be given
 to `--ip_reference` as plain, `.gz` or `.tar.gz` files. The reference is split by chromosome
 once at the start of the run.
+
+**Generation from the genome (default).** Without `--ip_reference`, the internal priming sites
+are detected on the annotated chromosomes of `--genome` (plain or `.gz` FASTA, same chromosome
+names as the GTF), with the rule of the SCALPEL mm10/hg38 references: genomic windows of 10 nt
+with at least 7 A, or starting with a stretch of 6 A, overlapping windows merged and trimmed to
+their first A (`+` strand; `-` strand: same rule on T, reverse complement). On mouse chr17, the
+generated sites match the SCALPEL `mm10_polya.track` reference at 99.8% (identical sites) and
+99.99% (base-level Jaccard index). The reference is saved to
+`<outdir>/ip_reference/ip_reference.track.gz` and can be reused with `--ip_reference`.
+It starts with the run (chromosomes read from the GTF) and runs in parallel with salmon: about
+4 min for a mouse genome (2.7 Gb, 4-6 CPUs, ~1.3 GB memory per 100 Mb chromosome).
+
+```bash
+nextflow run nf-core/scalpel \
+   -profile <docker/singularity/.../institute> \
+   --samplesheet samplesheet.csv \
+   --transcriptome /path/to/transcriptome.fa \
+   --gtf /path/to/annotation.gtf \
+   --genome /path/to/genome.fa \
+   --outdir <OUTDIR>
+```
 
 **Filtering rule (original SCALPEL).** For each isoform, the internal priming site closest to
 its 3' end, at least `--distance_ip` nt away (default 200), is located on its exons. Every
@@ -152,7 +174,7 @@ run (`<outdir>/isoform/*.annots.gz`):
 
 ```bash
 nextflow run nf-core/scalpel --samplesheet new_samples.csv --isoform_annotation results_run1/isoform \
-    --ip_reference mm10_polya.track.gz --outdir results_run2 -profile conda
+    --ip_reference results_run1/ip_reference/ip_reference.track.gz --outdir results_run2 -profile conda
 ```
 
 Annotation processing (salmon pseudobulk, isoform selection) is skipped (`--transcriptome`,
@@ -190,7 +212,7 @@ quarto render test.qmd
 The typical command for running the pipeline is as follows:
 
 ```bash
-nextflow run nf-core/scalpel --samplesheet ./samplesheet.csv --transcriptome transcripts.fa.gz --gtf annotation.gtf.gz --ip_reference polya.track.gz --outdir ./results -profile docker
+nextflow run nf-core/scalpel --samplesheet ./samplesheet.csv --transcriptome transcripts.fa.gz --gtf annotation.gtf.gz --genome genome.fa.gz --outdir ./results -profile docker
 ```
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.

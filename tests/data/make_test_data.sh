@@ -38,11 +38,18 @@ gzip -dc ${OUT}/annotations/genes.gtf.gz | \
 seqkit grep --id-regexp '^([^|]+)\|' -f ${TMP}/transcripts.txt \
     ${SRC}/annotations/gencode.vM21.transcripts.fa.gz | gzip -n > ${OUT}/annotations/transcripts.fa.gz
 
-#- genome (salmon decoys only): window sequence, keeping the chromosome name...
+#- genome (salmon decoys & internal priming reference generation): window sequence, N-padded
+#- up to the window start to keep the genomic coordinates of the BAM files...
 echo "Genome subsetting..."
-seqkit grep -p ${CHR} ${SRC}/annotations/GRCm38.subset.genome.fa.gz | \
-    seqkit subseq -r $((START+1)):${END} | \
-    seqkit replace -p '.*' -r ${CHR} | gzip -n > ${OUT}/annotations/genome.fa.gz
+{
+    echo ">${CHR}"
+    {
+        head -c ${START} /dev/zero | tr '\0' 'N'
+        seqkit grep -p ${CHR} ${SRC}/annotations/GRCm38.subset.genome.fa.gz | \
+            seqkit subseq -r $((START+1)):${END} | seqkit seq -s -w 0 | tr -d '\n'
+    } | fold -w 60
+    echo
+} | gzip -n > ${OUT}/annotations/genome.fa.gz
 
 #- internal priming reference: sites in the window...
 echo "Internal priming sites subsetting..."

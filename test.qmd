@@ -338,6 +338,24 @@ if(status == 0){
 }
 ```
 
+## Internal priming reference — generation from the genome
+
+Without `--ip_reference`, internal priming sites are detected on the genome (10 nt windows with
+>= 7 A or starting with 6 A, overlapping windows merged, trimmed to the first A; same rule on T
+for the `-` strand), as in the SCALPEL mm10/hg38 references (`tests/unit/ip_reference_test.R`).
+
+```{r ip-reference}
+out_dir = file.path(TMP, "ip_reference")
+status = run_rscript(c("tests/unit/ip_reference_test.R", file.path(BIN_RP, "ip_reference_generation.R"), out_dir), file.path(TMP, "ip_reference.log"))
+check("ip_ref", "internal priming reference test runs", status == 0)
+if(status == 0){
+  res = fread(file.path(out_dir, "checks.tsv"))
+  for(i in seq_len(nrow(res))) check("ip_ref", res$case[i], res$result[i] == "PASS")
+} else {
+  cat(readLines(file.path(TMP, "ip_reference.log")), sep = "\n")
+}
+```
+
 ## #38 / #28 — iDGE beyond R's integer limit
 
 50,000 cells x 50,000 isoforms (dense: 2.5e9 entries > `.Machine$integer.max`),
@@ -561,6 +579,39 @@ if(res$status == 0){
       same_idge(file.path(res$outdir, "dge", paste0(s, "_iDGE")), file.path(OUTDIR, "dge", paste0(s, "_iDGE"))))
   }
 }
+```
+
+```{r scenario-ip-reference}
+#| eval: !expr params$scenarios
+#- default: internal priming reference generated from --genome (baseline run)...
+check("ip_ref", "baseline run: internal priming reference generated from --genome", any(grepl("IP_REFERENCE_GENERATION", readLines(PIPELINE_LOG))))
+gen_file = file.path(OUTDIR, "ip_reference", "ip_reference.track.gz")
+check("ip_ref", "generated reference published (ip_reference/ip_reference.track.gz)", file.exists(gen_file))
+ref_file = normalizePath("tests/data/light/annotations/polya.track.gz")
+if(file.exists(gen_file)){
+  cols = c("seqnames", "start", "end", "V4", "V5", "strand")
+  gen = fread(cmd = paste("gzip -dc", gen_file), header = FALSE, col.names = cols)
+  ref = fread(cmd = paste("gzip -dc", ref_file), header = FALSE, col.names = cols)
+  gen = gen[start >= min(ref$start) & end <= max(ref$end)]
+  nb_shared = nrow(fintersect(gen[, .(seqnames, start, end, strand)], ref[, .(seqnames, start, end, strand)]))
+  message("Generated sites: ", nrow(gen), " | SCALPEL mm10 reference: ", nrow(ref), " | identical: ", nb_shared)
+  check("ip_ref", ">= 99.5% of the SCALPEL mm10 reference sites generated identically", nb_shared / nrow(ref) >= 0.995)
+}
+#- pre-built reference (SCALPEL mm10 track, --ip_reference)...
+res = run_pipeline("ip_prebuilt", c("--ip_reference", ref_file))
+check("ip_ref", "run with a pre-built --ip_reference completes", res$status == 0)
+check("ip_ref", "pre-built reference used (IP_SPLITTING, no generation)", any(grepl("IP_SPLITTING", res$log)) && !any(grepl("IP_REFERENCE_GENERATION", res$log)))
+if(res$status == 0){
+  for(s in SAMPLES){
+    check("ip_ref", paste0(s, ": iDGE identical with generated & pre-built (SCALPEL mm10) references"),
+      same_idge(file.path(res$outdir, "dge", paste0(s, "_iDGE")), file.path(OUTDIR, "dge", paste0(s, "_iDGE"))))
+  }
+}
+#- neither --ip_reference nor --genome...
+no_genome_config = file.path(TMP, "no_genome.config")
+writeLines(c("params {", "    genome = null", "}"), no_genome_config)
+res = run_pipeline("ip_missing", c("-c", no_genome_config))
+check("ip_ref", "no --ip_reference and no --genome -> explicit error", res$status != 0 && any(grepl("--ip_reference or --genome is required", res$log)))
 ```
 
 # Summary
