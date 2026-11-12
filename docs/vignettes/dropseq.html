@@ -2226,8 +2226,14 @@ font-size: 12pt;
   <li><a href="#scalpel-running" id="toc-scalpel-running" class="nav-link" data-scroll-target="#scalpel-running">SCALPEL running</a>
   <ul>
   <li><a href="#samplesheet" id="toc-samplesheet" class="nav-link" data-scroll-target="#samplesheet">Samplesheet</a></li>
-  <li><a href="#cell-barcodes-optional" id="toc-cell-barcodes-optional" class="nav-link" data-scroll-target="#cell-barcodes-optional">Cell barcodes (optional)</a></li>
   <li><a href="#execution" id="toc-execution" class="nav-link" data-scroll-target="#execution">Execution</a></li>
+  <li><a href="#options" id="toc-options" class="nav-link" data-scroll-target="#options">Options</a>
+  <ul>
+  <li><a href="#cell-barcodes" id="toc-cell-barcodes" class="nav-link" data-scroll-target="#cell-barcodes">Cell barcodes</a></li>
+  <li><a href="#cell-clusters" id="toc-cell-clusters" class="nav-link" data-scroll-target="#cell-clusters">Cell clusters</a></li>
+  <li><a href="#pre-built-internal-priming-reference" id="toc-pre-built-internal-priming-reference" class="nav-link" data-scroll-target="#pre-built-internal-priming-reference">Pre-built internal priming reference</a></li>
+  <li><a href="#profiles-and-resources" id="toc-profiles-and-resources" class="nav-link" data-scroll-target="#profiles-and-resources">Profiles and resources</a></li>
+  </ul></li>
   <li><a href="#main-parameters" id="toc-main-parameters" class="nav-link" data-scroll-target="#main-parameters">Main parameters</a></li>
   <li><a href="#results" id="toc-results" class="nav-link" data-scroll-target="#results">Results</a></li>
   </ul></li>
@@ -2286,31 +2292,18 @@ font-size: 12pt;
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="ex">3</span> directories, 10 files</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>SCALPEL requires a <strong>GTF genome annotation</strong> and a <strong>FASTA transcript annotation</strong> of your organism, and an <strong>internal priming reference</strong>. For the current analysis, we use a reduced annotation reference from GENCODE for Human (GENCODE.v41).</p>
+<p>SCALPEL requires a <strong>GTF genome annotation</strong> and a <strong>FASTA transcript annotation</strong> of your organism, and the <strong>genome FASTA</strong> (used to build the internal priming reference). For the current analysis, we use a reduced annotation reference from GENCODE for Human (GENCODE.v41).</p>
 <ul>
 <li><a href="https://zenodo.org/records/17176838/files/reduced_GENCODE.v41.annotation.gtf.gz?download=1">reduced_GENCODE.v41.annotation.gtf</a></li>
 <li><a href="https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_41/gencode.v41.transcripts.fa.gz">GENCODE.v41.transcript.fa</a></li>
-<li><a href="https://zenodo.org/records/15717592/files/hg38_ipriming_sites.bed.tar.gz?download=1">Human internal priming site reference (GRCh38)</a></li>
+<li><a href="https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz">hg38 genome (UCSC)</a></li>
 </ul>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> wget <span class="ex">-O</span> reduced_GENCODE.v41.annotation.gtf.gz https://zenodo.org/records/17176838/files/reduced_GENCODE.v41.annotation.gtf.gz<span class="pp">?</span>download=1</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> wget <span class="ex">https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_41/gencode.v41.transcripts.fa.gz</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> wget <span class="ex">-O</span> hg38_ipriming_sites.bed.tar.gz https://zenodo.org/records/15717592/files/hg38_ipriming_sites.bed.tar.gz<span class="pp">?</span>download=1</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> wget <span class="ex">https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Complete GTF genome annotation and FASTA transcripts annotation can be downloaded from <a href="https://www.gencodegenes.org">GENCODE</a> or <a href="https://www.ensembl.org/info/data/ftp/index.html">ENSEMBL</a>.</p>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>The internal priming reference can also be built by the pipeline from the genome FASTA (<code>--genome</code>, e.g. <a href="https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_41/GRCh38.primary_assembly.genome.fa.gz">GRCh38.primary_assembly.genome.fa.gz</a>) instead of <code>--ip_reference</code>. This works for any assembly or species (e.g. T2T); the reference is saved to <code>&lt;outdir&gt;/ip_reference/</code> and can be reused with <code>--ip_reference</code>.</p>
-</div>
-</div>
 </section>
 <section id="scalpel-running" class="level2">
 <h2 class="anchored" data-anchor-id="scalpel-running">SCALPEL running</h2>
@@ -2332,31 +2325,47 @@ Note
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ex">NPCs,reduced_GSE268222/fastq_files/NPCs_1000000_lib_16057AAB_TAGGCATG_read1_001.fastq.gz,reduced_GSE268222/fastq_files/NPCs_1000000_lib_16057AAB_TAGGCATG_read2_001.fastq.gz,reduced_GSE268222/dropseq_files/NPCs.bam,reduced_GSE268222/dropseq_files/NPCs.counts.txt</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
-<section id="cell-barcodes-optional" class="level3">
-<h3 class="anchored" data-anchor-id="cell-barcodes-optional">Cell barcodes (optional)</h3>
-<p>Optionally, you can restrict the analysis to selected cells with a <strong>barcodes_whitelist.csv</strong> file (<code>--barcodes_whitelist</code>) giving the barcode file of each sample (one barcode per line, as in the BAM <code>XC</code> tag). For the current analysis, we only use a subset of 100 barcodes for each sample, provided in the <code>reduced_GSE268222</code> directory:</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> cat <span class="ex">barcodes_whitelist.csv</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">sample,barcodes</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">hiPSCs,reduced_GSE268222/hiPSCs_barcodes.txt</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">NPCs,reduced_GSE268222/NPCs_barcodes.txt</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<p>To compare cell clusters instead of samples in the differential isoform usage, provide a <code>--clusters</code> file (<code>sample,barcode,cluster</code>).</p>
-</section>
 <section id="execution" class="level3">
 <h3 class="anchored" data-anchor-id="execution">Execution</h3>
-<p>To execute SCALPEL with the provided samplesheet and barcode whitelist, use the following command:</p>
+<p>To execute SCALPEL, use the following command:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nextflow</span> run plasslab/nf-core-scalpel <span class="at">-r</span> dev <span class="dt">\</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">-profile</span> conda <span class="dt">\</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--sequencing_platform</span> dropseq <span class="dt">\</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--samplesheet</span> samplesheet.csv <span class="dt">\</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--barcodes_whitelist</span> barcodes_whitelist.csv <span class="dt">\</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--transcriptome</span> gencode.v41.transcripts.fa.gz <span class="dt">\</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">--gtf</span> reduced_GENCODE.v41.annotation.gtf.gz <span class="dt">\</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">--ip_reference</span> hg38_ipriming_sites.bed.tar.gz <span class="dt">\</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">--outdir</span> results</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nextflow</span> run plasslab/nf-core-scalpel <span class="at">-r</span> dev <span class="dt">\</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">-profile</span> conda <span class="dt">\</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--sequencing_platform</span> dropseq <span class="dt">\</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--samplesheet</span> samplesheet.csv <span class="dt">\</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--transcriptome</span> gencode.v41.transcripts.fa.gz <span class="dt">\</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--gtf</span> reduced_GENCODE.v41.annotation.gtf.gz <span class="dt">\</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">--genome</span> hg38.fa.gz <span class="dt">\</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">--outdir</span> results</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
+</section>
+<section id="options" class="level3">
+<h3 class="anchored" data-anchor-id="options">Options</h3>
+<section id="cell-barcodes" class="level4">
+<h4 class="anchored" data-anchor-id="cell-barcodes">Cell barcodes</h4>
+<p>You can restrict the analysis to selected cells with a <strong>barcodes_whitelist.csv</strong> file (<code>--barcodes_whitelist</code>) giving the barcode file of each sample (one barcode per line, as in the BAM <code>XC</code> tag). For example, with the 100 barcodes per sample provided in the <code>reduced_GSE268222</code> directory:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> cat <span class="ex">barcodes_whitelist.csv</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">sample,barcodes</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">hiPSCs,reduced_GSE268222/hiPSCs_barcodes.txt</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="ex">NPCs,reduced_GSE268222/NPCs_barcodes.txt</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>and add <code>--barcodes_whitelist barcodes_whitelist.csv</code> to the command.</p>
+</section>
+<section id="cell-clusters" class="level4">
+<h4 class="anchored" data-anchor-id="cell-clusters">Cell clusters</h4>
+<p>To compare cell clusters instead of samples in the differential isoform usage, provide a <code>--clusters</code> file (<code>sample,barcode,cluster</code>).</p>
+</section>
+<section id="pre-built-internal-priming-reference" class="level4">
+<h4 class="anchored" data-anchor-id="pre-built-internal-priming-reference">Pre-built internal priming reference</h4>
+<p>The internal priming reference built from <code>--genome</code> is saved to <code>&lt;outdir&gt;/ip_reference/</code>. It can be reused, or replaced by the provided <a href="https://zenodo.org/records/15717592/files/hg38_ipriming_sites.bed.tar.gz?download=1">GRCh38 reference</a>, with <code>--ip_reference</code> (<code>--genome</code> is then not needed):</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="ex">--ip_reference</span> hg38_ipriming_sites.bed.tar.gz</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The generation from the genome works for any assembly or species (e.g. T2T).</p>
+</section>
+<section id="profiles-and-resources" class="level4">
+<h4 class="anchored" data-anchor-id="profiles-and-resources">Profiles and resources</h4>
 <p>Use <code>-profile docker</code>, <code>singularity</code> or <code>apptainer</code> instead of <code>conda</code> (add <code>emulate_amd64</code> on Apple Silicon with Docker), and <code>-resume</code> to restart a run from its completed steps.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center">
@@ -2370,10 +2379,10 @@ Tip
 <div class="callout-body-container callout-body">
 <p>The salmon steps request 36 GB of memory by default. On a laptop or a small server, cap the resources with a config file given with <code>-c local.config</code>:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> cat <span class="ex">local.config</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">process</span> {</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="ex">resourceLimits</span> = [cpus: 8, memory: <span class="st">&#39;14.GB&#39;</span>, time: <span class="st">&#39;6.h&#39;</span>]</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="er">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> cat <span class="ex">local.config</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">process</span> {</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="ex">resourceLimits</span> = [cpus: 8, memory: <span class="st">&#39;14.GB&#39;</span>, time: <span class="st">&#39;6.h&#39;</span>]</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="er">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </div>
 </div>
@@ -2390,6 +2399,7 @@ Warning
 <p>The BAM files, the GTF annotation and the internal priming reference must use the same chromosome names (e.g. ‘chr1’, …, ‘chrM’ vs ‘1’, …, ‘MT’). The pipeline checks this before processing the reads and stops with an explicit message in case of mismatch. Use references from the same source as the BAM files.</p>
 </div>
 </div>
+</section>
 </section>
 <section id="main-parameters" class="level3">
 <h3 class="anchored" data-anchor-id="main-parameters">Main parameters</h3>
@@ -2449,57 +2459,56 @@ Warning
 <section id="results" class="level3">
 <h3 class="anchored" data-anchor-id="results">Results</h3>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> nextflow <span class="ex">run</span> plasslab/nf-core-scalpel <span class="at">-r</span> dev <span class="at">-profile</span> conda <span class="at">-c</span> local.config <span class="at">--sequencing_platform</span> dropseq <span class="at">--samplesheet</span> samplesheet.csv <span class="at">--barcodes_whitelist</span> barcodes_whitelist.csv <span class="at">--transcriptome</span> gencode.v41.transcripts.fa.gz <span class="at">--gtf</span> reduced_GENCODE.v41.annotation.gtf.gz <span class="at">--ip_reference</span> hg38_ipriming_sites.bed.tar.gz <span class="at">--outdir</span> results</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ex">------------------------------------------------------</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>                                        <span class="ex">,--./,-.</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="ex">___</span>     __   __   __   ___     /,-._.--~<span class="st">&#39;</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="st">  |\ | |__  __ /  ` /  \ |__) |__         }  {</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="st">  | \| |       \__, \__/ |  \ |___     \`-._,-`-,</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="st">                                        `._,._,&#39;</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="ex">nf-core/scalpel</span> 1.0.0dev</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="ex">------------------------------------------------------</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="ex">Input/output</span> options</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="ex">samplesheet</span>        : samplesheet.csv</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="ex">gtf</span>                : reduced_GENCODE.v41.annotation.gtf.gz</span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  <span class="ex">transcriptome</span>      : gencode.v41.transcripts.fa.gz</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  <span class="ex">outdir</span>             : results</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="ex">barcodes_whitelist</span> : barcodes_whitelist.csv</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>  <span class="ex">ip_reference</span>       : hg38_ipriming_sites.bed.tar.gz</span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="ex">!!</span> Only displaying parameters that differ from the pipeline defaults !!</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="ex">------------------------------------------------------</span></span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="ex">*</span> The nf-core framework</span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    <span class="ex">https://doi.org/10.1038/s41587-020-0439-x</span></span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="ex">*</span> Software dependencies</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    <span class="ex">https://github.com/nf-core/scalpel/blob/master/CITATIONS.md</span></span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="ex">Pipeline</span> options</span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>  <span class="ex">sequencing_platform</span> : dropseq</span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>  <span class="ex">libtype</span>             : A</span>
-<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>  <span class="ex">distance_profile</span>    : 500</span>
-<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>  <span class="ex">distance_reads</span>      : 600</span>
-<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>  <span class="ex">min_mapq</span>            : 255</span>
-<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>  <span class="ex">distance_3end</span>       : 100</span>
-<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>  <span class="ex">distance_ip</span>         : 200</span>
-<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>  <span class="ex">ip_reference</span>        : hg38_ipriming_sites.bed.tar.gz</span>
-<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>  <span class="ex">salmon_decoys</span>       : false</span>
-<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>  <span class="ex">gene_fraction</span>       : 98%</span>
-<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>  <span class="ex">binsize</span>             : 20</span>
-<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>  <span class="ex">em_tol</span> / max_iter   : 0.000001 / 1000</span>
-<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>  <span class="ex">barcodes_whitelist</span>  : barcodes_whitelist.csv</span>
-<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a><span class="ex">------------------------------------------------------</span></span>
-<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a><span class="ex">[PIPELINE]</span> nf-core/scalpel 1.0.0dev <span class="kw">|</span> <span class="va">profile</span><span class="op">=</span>conda</span>
-<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> 85/88de5d] READS_PROCESSING:DGE_BARCODES <span class="er">(</span><span class="ex">NPCs</span><span class="kw">)</span></span>
-<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> 09/61a89d] READS_PROCESSING:DGE_BARCODES <span class="er">(</span><span class="ex">hiPSCs</span><span class="kw">)</span></span>
-<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> bf/819cd2] ANNOTATION_PROCESSING:SALMON_INDEX <span class="er">(</span><span class="op">&lt;(</span><span class="fu">gunzip</span> <span class="at">-c</span> gencode.v41.transcripts.fa.gz<span class="op">)</span><span class="kw">)</span></span>
-<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> 06/35228b] READS_PROCESSING:SAMTOOLS_INDEX <span class="er">(</span><span class="ex">NPCs</span><span class="kw">)</span></span>
-<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> f8/07f3c6] READS_PROCESSING:SAMTOOLS_INDEX <span class="er">(</span><span class="ex">hiPSCs</span><span class="kw">)</span></span>
-<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> c4/ba3962] ANNOTATION_PROCESSING:SALMON_QUANT <span class="er">(</span><span class="ex">NPCs</span><span class="kw">)</span></span>
-<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a><span class="ex">...</span></span>
-<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> 0b/7c5db5] ISOFORM_QUANTIFICATION:DGE_GENERATION <span class="er">(</span><span class="ex">hiPSCs</span><span class="kw">)</span></span>
-<span id="cb7-48"><a href="#cb7-48" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> 94/ed7fa7] ISOFORM_QUANTIFICATION:DGE_GENERATION <span class="er">(</span><span class="ex">NPCs</span><span class="kw">)</span></span>
-<span id="cb7-49"><a href="#cb7-49" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> 8a/daa704] APA_CHARACTERIZATION:DIFFERENTIAL_ISOFORM_USAGE <span class="er">(</span><span class="ex">2</span> samples<span class="kw">)</span></span>
-<span id="cb7-50"><a href="#cb7-50" aria-hidden="true" tabindex="-1"></a><span class="ex">-[nf-core/scalpel]</span> Pipeline completed successfully-</span>
-<span id="cb7-51"><a href="#cb7-51" aria-hidden="true" tabindex="-1"></a><span class="ex">[SUCCESS]</span> completed=58 failed=0 cached=0</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> nextflow <span class="ex">run</span> plasslab/nf-core-scalpel <span class="at">-r</span> dev <span class="at">-profile</span> conda <span class="at">-c</span> local.config <span class="at">--sequencing_platform</span> dropseq <span class="at">--samplesheet</span> samplesheet.csv <span class="at">--transcriptome</span> gencode.v41.transcripts.fa.gz <span class="at">--gtf</span> reduced_GENCODE.v41.annotation.gtf.gz <span class="at">--genome</span> hg38.fa.gz <span class="at">--outdir</span> results</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="ex">------------------------------------------------------</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>                                        <span class="ex">,--./,-.</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="ex">___</span>     __   __   __   ___     /,-._.--~<span class="st">&#39;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="st">  |\ | |__  __ /  ` /  \ |__) |__         }  {</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="st">  | \| |       \__, \__/ |  \ |___     \`-._,-`-,</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="st">                                        `._,._,&#39;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="ex">nf-core/scalpel</span> 1.0.0dev</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="ex">------------------------------------------------------</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="ex">Input/output</span> options</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="ex">samplesheet</span>        : samplesheet.csv</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="ex">gtf</span>                : reduced_GENCODE.v41.annotation.gtf.gz</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="ex">genome</span>             : hg38.fa.gz</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="ex">transcriptome</span>      : gencode.v41.transcripts.fa.gz</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="ex">outdir</span>             : results</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="ex">!!</span> Only displaying parameters that differ from the pipeline defaults !!</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="ex">------------------------------------------------------</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="ex">*</span> The nf-core framework</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="ex">https://doi.org/10.1038/s41587-020-0439-x</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="ex">*</span> Software dependencies</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>    <span class="ex">https://github.com/nf-core/scalpel/blob/master/CITATIONS.md</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="ex">Pipeline</span> options</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>  <span class="ex">sequencing_platform</span> : dropseq</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>  <span class="ex">libtype</span>             : A</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>  <span class="ex">distance_profile</span>    : 500</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>  <span class="ex">distance_reads</span>      : 600</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>  <span class="ex">min_mapq</span>            : 255</span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>  <span class="ex">distance_3end</span>       : 100</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>  <span class="ex">distance_ip</span>         : 200</span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>  <span class="ex">ip_reference</span>        : generated from <span class="at">--genome</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>  <span class="ex">salmon_decoys</span>       : false</span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>  <span class="ex">gene_fraction</span>       : 98%</span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>  <span class="ex">binsize</span>             : 20</span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>  <span class="ex">em_tol</span> / max_iter   : 0.000001 / 1000</span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>  <span class="ex">barcodes_whitelist</span>  : not provided</span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a><span class="ex">------------------------------------------------------</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a><span class="ex">[PIPELINE]</span> nf-core/scalpel 1.0.0dev <span class="kw">|</span> <span class="va">profile</span><span class="op">=</span>conda</span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> 68/3106f8] READS_PROCESSING:IP_REFERENCE_GENERATION <span class="er">(</span><span class="ex">hg38.fa.gz</span><span class="kw">)</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> d1/56ca30] ANNOTATION_PROCESSING:SALMON_INDEX <span class="er">(</span><span class="op">&lt;(</span><span class="fu">gunzip</span> <span class="at">-c</span> gencode.v41.transcripts.fa.gz<span class="op">)</span><span class="kw">)</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> 55/d70138] READS_PROCESSING:DGE_BARCODES <span class="er">(</span><span class="ex">hiPSCs</span><span class="kw">)</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> 01/cdae1d] READS_PROCESSING:DGE_BARCODES <span class="er">(</span><span class="ex">NPCs</span><span class="kw">)</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> ae/c58ef0] ANNOTATION_PROCESSING:SALMON_QUANT <span class="er">(</span><span class="ex">hiPSCs</span><span class="kw">)</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> d6/fd224b] ANNOTATION_PROCESSING:SALMON_QUANT <span class="er">(</span><span class="ex">NPCs</span><span class="kw">)</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a><span class="ex">...</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> 38/401b68] ISOFORM_QUANTIFICATION:DGE_GENERATION <span class="er">(</span><span class="ex">hiPSCs</span><span class="kw">)</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> 41/8387a0] ISOFORM_QUANTIFICATION:DGE_GENERATION <span class="er">(</span><span class="ex">NPCs</span><span class="kw">)</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a><span class="ex">[PROCESS</span> 9a/eb1875] APA_CHARACTERIZATION:DIFFERENTIAL_ISOFORM_USAGE <span class="er">(</span><span class="ex">2</span> samples<span class="kw">)</span></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a><span class="ex">-[nf-core/scalpel]</span> Pipeline completed successfully-</span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a><span class="ex">[SUCCESS]</span> completed=62 failed=0 cached=0</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Following the successful execution of SCALPEL, the output directory (<code>results</code>) contains:</p>
 <ul>
@@ -2513,6 +2522,8 @@ The isoform count matrix (iDGE) of each sample, in sparse 10x format (<code>matr
 The reads used for the quantification (duplicated reads and internal priming associated reads discarded, only reads passing the SCALPEL filters).</p></li>
 <li><p><strong>isoform/</strong>:<br>
 The selected isoforms, reusable with <code>--isoform_annotation</code> to quantify new samples on the same isoforms.</p></li>
+<li><p><strong>ip_reference/</strong>:<br>
+The internal priming reference built from the genome (reusable with <code>--ip_reference</code>).</p></li>
 <li><p><strong>probability/</strong>:<br>
 The read distance distribution to the 3’ end of each sample.</p></li>
 <li><p><strong>pipeline_info/</strong>:<br>
@@ -2520,87 +2531,97 @@ Execution reports and software versions.</p></li>
 </ul>
 <p>The other directories contain intermediate files of each step (see the <a href="https://github.com/plasslab/nf-core-scalpel/blob/dev/docs/output.md">output documentation</a>).</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> tree <span class="ex">-L</span> 2 results</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">results</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> bed</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> cell</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_cell_chunk_1.fst</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_cell_chunk_1.fst</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> dge</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_iDGE</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_iDGE</span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> differential</span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── DIU_table.csv</span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── iDGE_seurat.RDS</span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> em</span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_cell_chunk_1_em_results.fst</span>
-<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_cell_chunk_1_em_results.fst</span>
-<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> filtered_bams</span>
-<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_filtered.bam</span>
-<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_filtered.bam.bai</span>
-<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_filtered.bam</span>
-<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_filtered.bam.bai</span>
-<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> fragment</span>
-<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_hiPSCs_chr10.ip_filtered.frag.fst</span>
-<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_hiPSCs_chr12.ip_filtered.frag.fst</span>
-<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_hiPSCs_chr17.ip_filtered.frag.fst</span>
-<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_hiPSCs_chr18.ip_filtered.frag.fst</span>
-<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_NPCs_chr10.ip_filtered.frag.fst</span>
-<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_NPCs_chr12.ip_filtered.frag.fst</span>
-<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_NPCs_chr17.ip_filtered.frag.fst</span>
-<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_NPCs_chr18.ip_filtered.frag.fst</span>
-<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> ip</span>
-<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr10.ip_filtered.fst</span>
-<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr12.ip_filtered.fst</span>
-<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr17.ip_filtered.fst</span>
-<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr18.ip_filtered.fst</span>
-<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_chr10.ip_filtered.fst</span>
-<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_chr12.ip_filtered.fst</span>
-<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_chr17.ip_filtered.fst</span>
-<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_chr18.ip_filtered.fst</span>
-<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> isoform</span>
-<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── chr10.annots.gz</span>
-<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── chr12.annots.gz</span>
-<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── chr17.annots.gz</span>
-<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── chr18.annots.gz</span>
-<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── stats.txt</span>
-<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> pipeline_info</span>
-<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── collapsed_isoforms.log</span>
-<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── execution_report_2026-11-11_23-51-28.html</span>
-<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── execution_timeline_2026-11-11_23-51-28.html</span>
-<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── execution_trace_2026-11-11_23-51-28.txt</span>
-<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── nf_core_scalpel_software_versions.yml</span>
-<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── params_2026-11-11_23-51-29.json</span>
-<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── pipeline_dag_2026-11-11_23-51-28.html</span>
-<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> probability</span>
-<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs.pdf</span>
-<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs.prob</span>
-<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs.pdf</span>
-<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs.prob</span>
-<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> reads</span>
-<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr10.fst</span>
-<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr12.fst</span>
-<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr17.fst</span>
-<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr18.fst</span>
-<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_chr10.fst</span>
-<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_chr12.fst</span>
-<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_chr17.fst</span>
-<span id="cb8-68"><a href="#cb8-68" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_chr18.fst</span>
-<span id="cb8-69"><a href="#cb8-69" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> salmon</span>
-<span id="cb8-70"><a href="#cb8-70" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs</span>
-<span id="cb8-71"><a href="#cb8-71" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_lib_format_counts.json</span>
-<span id="cb8-72"><a href="#cb8-72" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_meta_info.json</span>
-<span id="cb8-73"><a href="#cb8-73" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs</span>
-<span id="cb8-74"><a href="#cb8-74" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_lib_format_counts.json</span>
-<span id="cb8-75"><a href="#cb8-75" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_meta_info.json</span>
-<span id="cb8-76"><a href="#cb8-76" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── salmon</span>
-<span id="cb8-77"><a href="#cb8-77" aria-hidden="true" tabindex="-1"></a><span class="ex">└──</span> transcript</span>
-<span id="cb8-78"><a href="#cb8-78" aria-hidden="true" tabindex="-1"></a>    <span class="ex">├──</span> chr10.tsv</span>
-<span id="cb8-79"><a href="#cb8-79" aria-hidden="true" tabindex="-1"></a>    <span class="ex">├──</span> chr12.tsv</span>
-<span id="cb8-80"><a href="#cb8-80" aria-hidden="true" tabindex="-1"></a>    <span class="ex">├──</span> chr17.tsv</span>
-<span id="cb8-81"><a href="#cb8-81" aria-hidden="true" tabindex="-1"></a>    <span class="ex">└──</span> chr18.tsv</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> tree <span class="ex">-L</span> 2 results</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">results</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> bed</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> cell</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_cell_chunk_1.fst</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_cell_chunk_2.fst</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_cell_chunk_3.fst</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_cell_chunk_1.fst</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_cell_chunk_2.fst</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_cell_chunk_3.fst</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> dge</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_iDGE</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_iDGE</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> differential</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── DIU_table.csv</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── iDGE_seurat.RDS</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> em</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_cell_chunk_1_em_results.fst</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_cell_chunk_2_em_results.fst</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_cell_chunk_3_em_results.fst</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_cell_chunk_1_em_results.fst</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_cell_chunk_2_em_results.fst</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_cell_chunk_3_em_results.fst</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> filtered_bams</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_filtered.bam</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_filtered.bam.bai</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_filtered.bam</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_filtered.bam.bai</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> fragment</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_hiPSCs_chr10.ip_filtered.frag.fst</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_hiPSCs_chr12.ip_filtered.frag.fst</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_hiPSCs_chr17.ip_filtered.frag.fst</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_hiPSCs_chr18.ip_filtered.frag.fst</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_NPCs_chr10.ip_filtered.frag.fst</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_NPCs_chr12.ip_filtered.frag.fst</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_NPCs_chr17.ip_filtered.frag.fst</span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_NPCs_chr18.ip_filtered.frag.fst</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> ip</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr10.ip_filtered.fst</span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr12.ip_filtered.fst</span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr17.ip_filtered.fst</span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr18.ip_filtered.fst</span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_chr10.ip_filtered.fst</span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_chr12.ip_filtered.fst</span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_chr17.ip_filtered.fst</span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_chr18.ip_filtered.fst</span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> ip_reference</span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── ip_reference.track.gz</span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> isoform</span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── chr10.annots.gz</span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── chr12.annots.gz</span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── chr17.annots.gz</span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── chr18.annots.gz</span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── stats.txt</span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> pipeline_info</span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── collapsed_isoforms.log</span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── execution_report_2026-11-12_01-20-28.html</span>
+<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── execution_timeline_2026-11-12_01-20-28.html</span>
+<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── execution_trace_2026-11-12_01-20-28.txt</span>
+<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── nf_core_scalpel_software_versions.yml</span>
+<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── params_2026-11-12_01-20-29.json</span>
+<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── pipeline_dag_2026-11-12_01-20-28.html</span>
+<span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> probability</span>
+<span id="cb9-66"><a href="#cb9-66" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs.pdf</span>
+<span id="cb9-67"><a href="#cb9-67" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs.prob</span>
+<span id="cb9-68"><a href="#cb9-68" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs.pdf</span>
+<span id="cb9-69"><a href="#cb9-69" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs.prob</span>
+<span id="cb9-70"><a href="#cb9-70" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> reads</span>
+<span id="cb9-71"><a href="#cb9-71" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr10.fst</span>
+<span id="cb9-72"><a href="#cb9-72" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr12.fst</span>
+<span id="cb9-73"><a href="#cb9-73" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr17.fst</span>
+<span id="cb9-74"><a href="#cb9-74" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_chr18.fst</span>
+<span id="cb9-75"><a href="#cb9-75" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_chr10.fst</span>
+<span id="cb9-76"><a href="#cb9-76" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_chr12.fst</span>
+<span id="cb9-77"><a href="#cb9-77" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_chr17.fst</span>
+<span id="cb9-78"><a href="#cb9-78" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── NPCs_chr18.fst</span>
+<span id="cb9-79"><a href="#cb9-79" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> salmon</span>
+<span id="cb9-80"><a href="#cb9-80" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs</span>
+<span id="cb9-81"><a href="#cb9-81" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_lib_format_counts.json</span>
+<span id="cb9-82"><a href="#cb9-82" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── hiPSCs_meta_info.json</span>
+<span id="cb9-83"><a href="#cb9-83" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs</span>
+<span id="cb9-84"><a href="#cb9-84" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_lib_format_counts.json</span>
+<span id="cb9-85"><a href="#cb9-85" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> ├── NPCs_meta_info.json</span>
+<span id="cb9-86"><a href="#cb9-86" aria-hidden="true" tabindex="-1"></a><span class="ex">│  </span> └── salmon</span>
+<span id="cb9-87"><a href="#cb9-87" aria-hidden="true" tabindex="-1"></a><span class="ex">└──</span> transcript</span>
+<span id="cb9-88"><a href="#cb9-88" aria-hidden="true" tabindex="-1"></a>    <span class="ex">├──</span> chr10.tsv</span>
+<span id="cb9-89"><a href="#cb9-89" aria-hidden="true" tabindex="-1"></a>    <span class="ex">├──</span> chr12.tsv</span>
+<span id="cb9-90"><a href="#cb9-90" aria-hidden="true" tabindex="-1"></a>    <span class="ex">├──</span> chr17.tsv</span>
+<span id="cb9-91"><a href="#cb9-91" aria-hidden="true" tabindex="-1"></a>    <span class="ex">└──</span> chr18.tsv</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 </section>

@@ -46,23 +46,19 @@ reduced_GSE104556
 5 directories, 6 files
 ```
 
-SCALPEL requires a **GTF genome annotation** and a **FASTA transcript annotation** of your organism, and an **internal priming reference**. For the current analysis, we use a reduced annotation reference from GENCODE for Mouse (GENCODE.vM21).
+SCALPEL requires a **GTF genome annotation** and a **FASTA transcript annotation** of your organism, and the **genome FASTA** (used to build the internal priming reference). For the current analysis, we use a reduced annotation reference from GENCODE for Mouse (GENCODE.vM21).
 
 - [reduced_GENCODE.vM21.annotation.gtf](https://zenodo.org/records/17176838/files/reduced_GENCODE.vM21.annotation.gtf.gz?download=1)
 - [GENCODE.vM21.transcript.fa](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M21/gencode.vM21.transcripts.fa.gz)
-- [Mouse internal priming site reference (mm10)](https://zenodo.org/records/15664563/files/mm10_polya.track.tar.gz?download=1)
+- [mm10 genome (UCSC)](https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/mm10.fa.gz)
 
 ```{sh}
 > wget -O reduced_GENCODE.vM21.annotation.gtf.gz https://zenodo.org/records/17176838/files/reduced_GENCODE.vM21.annotation.gtf.gz?download=1
 > wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M21/gencode.vM21.transcripts.fa.gz
-> wget -O mm10_polya.track.tar.gz https://zenodo.org/records/15664563/files/mm10_polya.track.tar.gz?download=1
+> wget https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/mm10.fa.gz
 ```
 
 Complete GTF genome annotation and FASTA transcripts annotation can be downloaded from [GENCODE](https://www.gencodegenes.org) or [ENSEMBL](https://www.ensembl.org/info/data/ftp/index.html).
-
-::: {.callout-note}
-The internal priming reference can also be built by the pipeline from the genome FASTA (`--genome`, e.g. [GRCm38.primary_assembly.genome.fa.gz](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M21/GRCm38.primary_assembly.genome.fa.gz)) instead of `--ip_reference`. This works for any assembly or species (e.g. mm39, T2T); the reference is saved to `<outdir>/ip_reference/` and can be reused with `--ip_reference`.
-:::
 
 ## SCALPEL running
 
@@ -84,9 +80,25 @@ SRR6129050,reduced_GSE104556/fastq_files/SRR6129050_1000000_S1_L001_R1_001.fastq
 SRR6129051,reduced_GSE104556/fastq_files/SRR6129051_1000000_S1_L001_R1_001.fastq.gz,reduced_GSE104556/fastq_files/SRR6129051_1000000_S1_L001_R2_001.fastq.gz,reduced_GSE104556/cellranger_samples/SRR6129051
 ```
 
-### Cell barcodes (optional)
+### Execution
 
-Optionally, you can restrict the analysis to selected cells with a **barcodes_whitelist.csv** file (`--barcodes_whitelist`) giving the barcode file of each sample (one barcode per line, as in the BAM `CB` tag). For the current analysis, we only use a subset of 100 barcodes for each sample, provided in the `reduced_GSE104556` directory:
+To execute SCALPEL, use the following command:
+
+```{sh}
+nextflow run plasslab/nf-core-scalpel -r dev \
+    -profile conda \
+    --samplesheet samplesheet.csv \
+    --transcriptome gencode.vM21.transcripts.fa.gz \
+    --gtf reduced_GENCODE.vM21.annotation.gtf.gz \
+    --genome mm10.fa.gz \
+    --outdir results
+```
+
+### Options
+
+#### Cell barcodes
+
+You can restrict the analysis to selected cells with a **barcodes_whitelist.csv** file (`--barcodes_whitelist`) giving the barcode file of each sample (one barcode per line, as in the BAM `CB` tag). For example, with the 100 barcodes per sample provided in the `reduced_GSE104556` directory:
 
 ```{sh}
 > cat barcodes_whitelist.csv
@@ -95,22 +107,23 @@ SRR6129050,reduced_GSE104556/SRR6129050_barcodes.txt
 SRR6129051,reduced_GSE104556/SRR6129051_barcodes.txt
 ```
 
+and add `--barcodes_whitelist barcodes_whitelist.csv` to the command.
+
+#### Cell clusters
+
 To compare cell clusters instead of samples in the differential isoform usage, provide a `--clusters` file (`sample,barcode,cluster`).
 
-### Execution
+#### Pre-built internal priming reference
 
-To execute SCALPEL with the provided samplesheet and barcode whitelist, use the following command:
+The internal priming reference built from `--genome` is saved to `<outdir>/ip_reference/`. It can be reused, or replaced by the provided [mm10 reference](https://zenodo.org/records/15664563/files/mm10_polya.track.tar.gz?download=1), with `--ip_reference` (`--genome` is then not needed):
 
 ```{sh}
-nextflow run plasslab/nf-core-scalpel -r dev \
-    -profile conda \
-    --samplesheet samplesheet.csv \
-    --barcodes_whitelist barcodes_whitelist.csv \
-    --transcriptome gencode.vM21.transcripts.fa.gz \
-    --gtf reduced_GENCODE.vM21.annotation.gtf.gz \
-    --ip_reference mm10_polya.track.tar.gz \
-    --outdir results
+    --ip_reference mm10_polya.track.tar.gz
 ```
+
+The generation from the genome works for any assembly or species (e.g. mm39, T2T).
+
+#### Profiles and resources
 
 Use `-profile docker`, `singularity` or `apptainer` instead of `conda` (add `emulate_amd64` on Apple Silicon with Docker), and `-resume` to restart a run from its completed steps.
 
@@ -146,7 +159,7 @@ See the [usage documentation](https://github.com/plasslab/nf-core-scalpel/blob/d
 ### Results
 
 ```{sh}
-> nextflow run plasslab/nf-core-scalpel -r dev -profile conda -c local.config --samplesheet samplesheet.csv --barcodes_whitelist barcodes_whitelist.csv --transcriptome gencode.vM21.transcripts.fa.gz --gtf reduced_GENCODE.vM21.annotation.gtf.gz --ip_reference mm10_polya.track.tar.gz --outdir results
+> nextflow run plasslab/nf-core-scalpel -r dev -profile conda -c local.config --samplesheet samplesheet.csv --transcriptome gencode.vM21.transcripts.fa.gz --gtf reduced_GENCODE.vM21.annotation.gtf.gz --genome mm10.fa.gz --outdir results
 
 ------------------------------------------------------
                                         ,--./,-.
@@ -159,10 +172,9 @@ See the [usage documentation](https://github.com/plasslab/nf-core-scalpel/blob/d
 Input/output options
   samplesheet        : samplesheet.csv
   gtf                : reduced_GENCODE.vM21.annotation.gtf.gz
+  genome             : mm10.fa.gz
   transcriptome      : gencode.vM21.transcripts.fa.gz
   outdir             : results
-  barcodes_whitelist : barcodes_whitelist.csv
-  ip_reference       : mm10_polya.track.tar.gz
 !! Only displaying parameters that differ from the pipeline defaults !!
 ------------------------------------------------------
 * The nf-core framework
@@ -177,26 +189,26 @@ Pipeline options
   min_mapq            : 255
   distance_3end       : 100
   distance_ip         : 200
-  ip_reference        : mm10_polya.track.tar.gz
+  ip_reference        : generated from --genome
   salmon_decoys       : false
   gene_fraction       : 98%
   binsize             : 20
   em_tol / max_iter   : 0.000001 / 1000
-  barcodes_whitelist  : barcodes_whitelist.csv
+  barcodes_whitelist  : not provided
 ------------------------------------------------------
 [PIPELINE] nf-core/scalpel 1.0.0dev | profile=conda
-[PROCESS 57/bac887] ANNOTATION_PROCESSING:SALMON_INDEX (<(gunzip -c gencode.vM21.transcripts.fa.gz))
-[PROCESS cc/bdc63a] ANNOTATION_PROCESSING:SALMON_QUANT (SRR6129051)
-[PROCESS 75/6aee34] ANNOTATION_PROCESSING:SALMON_QUANT (SRR6129050)
-[PROCESS 27/3eb524] ANNOTATION_PROCESSING:TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING (reduced_GENCODE.vM21.annotation.gtf.gz)
-[PROCESS f3/f2c81c] ANNOTATION_PROCESSING:ISOFORM_SELECTION (chr10)
-[PROCESS 23/900f73] ANNOTATION_PROCESSING:ISOFORM_SELECTION (chr18)
+[PROCESS a2/ee760b] READS_PROCESSING:IP_REFERENCE_GENERATION (mm10.fa.gz)
+[PROCESS b0/d506a1] ANNOTATION_PROCESSING:SALMON_INDEX (<(gunzip -c gencode.vM21.transcripts.fa.gz))
+[PROCESS 4c/317ccd] ANNOTATION_PROCESSING:SALMON_QUANT (SRR6129050)
+[PROCESS a1/59ca25] ANNOTATION_PROCESSING:SALMON_QUANT (SRR6129051)
+[PROCESS 29/8271ed] ANNOTATION_PROCESSING:TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING (reduced_GENCODE.vM21.annotation.gtf.gz)
+[PROCESS 17/9de559] ANNOTATION_PROCESSING:ISOFORM_SELECTION (chr18)
 ...
-[PROCESS 19/6469d0] ISOFORM_QUANTIFICATION:DGE_GENERATION (SRR6129050)
-[PROCESS 9a/470aa6] ISOFORM_QUANTIFICATION:DGE_GENERATION (SRR6129051)
-[PROCESS 3d/41f9dd] APA_CHARACTERIZATION:DIFFERENTIAL_ISOFORM_USAGE (2 samples)
+[PROCESS 95/4d4884] ISOFORM_QUANTIFICATION:DGE_GENERATION (SRR6129050)
+[PROCESS ac/423c15] ISOFORM_QUANTIFICATION:DGE_GENERATION (SRR6129051)
+[PROCESS de/7e4ebb] APA_CHARACTERIZATION:DIFFERENTIAL_ISOFORM_USAGE (2 samples)
 -[nf-core/scalpel] Pipeline completed successfully-
-[SUCCESS] completed=42 failed=0 cached=0
+[SUCCESS] completed=46 failed=0 cached=0
 ```
 
 Following the successful execution of SCALPEL, the output directory (`results`) contains:
@@ -216,6 +228,9 @@ The reads used for the quantification (duplicated reads and internal priming ass
 - **isoform/**:\
 The selected isoforms, reusable with `--isoform_annotation` to quantify new samples on the same isoforms.
 
+- **ip_reference/**:\
+The internal priming reference built from the genome (reusable with `--ip_reference`).
+
 - **probability/**:\
 The read distance distribution to the 3' end of each sample.
 
@@ -232,7 +247,11 @@ results
 │   └── SRR6129051
 ├── cell
 │   ├── SRR6129050_cell_chunk_1.fst
-│   └── SRR6129051_cell_chunk_1.fst
+│   ├── SRR6129050_cell_chunk_2.fst
+│   ├── SRR6129050_cell_chunk_3.fst
+│   ├── SRR6129051_cell_chunk_1.fst
+│   ├── SRR6129051_cell_chunk_2.fst
+│   └── SRR6129051_cell_chunk_3.fst
 ├── dge
 │   ├── SRR6129050_iDGE
 │   └── SRR6129051_iDGE
@@ -241,7 +260,11 @@ results
 │   └── iDGE_seurat.RDS
 ├── em
 │   ├── SRR6129050_cell_chunk_1_em_results.fst
-│   └── SRR6129051_cell_chunk_1_em_results.fst
+│   ├── SRR6129050_cell_chunk_2_em_results.fst
+│   ├── SRR6129050_cell_chunk_3_em_results.fst
+│   ├── SRR6129051_cell_chunk_1_em_results.fst
+│   ├── SRR6129051_cell_chunk_2_em_results.fst
+│   └── SRR6129051_cell_chunk_3_em_results.fst
 ├── filtered_bams
 │   ├── SRR6129050_filtered.bam
 │   ├── SRR6129050_filtered.bam.bai
@@ -257,6 +280,8 @@ results
 │   ├── SRR6129050_chr17.ip_filtered.fst
 │   ├── SRR6129051_chr10.ip_filtered.fst
 │   └── SRR6129051_chr17.ip_filtered.fst
+├── ip_reference
+│   └── ip_reference.track.gz
 ├── isoform
 │   ├── chr10.annots.gz
 │   ├── chr12.annots.gz
@@ -265,12 +290,12 @@ results
 │   └── stats.txt
 ├── pipeline_info
 │   ├── collapsed_isoforms.log
-│   ├── execution_report_2026-11-11_23-48-03.html
-│   ├── execution_timeline_2026-11-11_23-48-03.html
-│   ├── execution_trace_2026-11-11_23-48-03.txt
+│   ├── execution_report_2026-11-12_01-16-10.html
+│   ├── execution_timeline_2026-11-12_01-16-10.html
+│   ├── execution_trace_2026-11-12_01-16-10.txt
 │   ├── nf_core_scalpel_software_versions.yml
-│   ├── params_2026-11-11_23-48-04.json
-│   └── pipeline_dag_2026-11-11_23-48-03.html
+│   ├── params_2026-11-12_01-16-12.json
+│   └── pipeline_dag_2026-11-12_01-16-10.html
 ├── probability
 │   ├── SRR6129050.pdf
 │   ├── SRR6129050.prob
