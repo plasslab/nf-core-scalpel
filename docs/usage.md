@@ -173,6 +173,22 @@ fraction estimates are no better than an uninformative guess and pooled estimate
 6-15 points, so such isoforms are collapsed (276 more isoforms, 1.4%, on GSE104556). Use
 `--distance_3end 50 --distance_profile 600` to reproduce the original isoform selection.
 
+## Read distance distribution
+
+The probability of a read given its distance to the isoform 3' end is learned per sample from
+the genes with a single selected isoform (excluding the top `--gene_fraction` expressed genes),
+in bins of `--binsize` nt. When it is learned from fewer than 100 reads (very small / test
+datasets), the pipeline warns (log and `probability/<sample>.warning.txt`): many distances are
+then never observed and get a null probability, and the EM relies on the isoform TPM fractions.
+
+## Read distance distribution
+
+The probability of a read given its distance to the isoform 3' end is learned per sample from
+the genes with a single selected isoform (excluding the top `--gene_fraction` expressed genes),
+in bins of `--binsize` nt. When it is learned from fewer than 100 reads (very small / test
+datasets), the pipeline warns (log and `probability/<sample>.warning.txt`): many distances are
+then never observed and get a null probability, and the EM relies on the isoform TPM fractions.
+
 ## Isoform quantification (EM)
 
 For each cell and gene, the isoform abundances are estimated by an EM algorithm from the

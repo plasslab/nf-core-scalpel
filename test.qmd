@@ -184,6 +184,14 @@ for(s in SAMPLES){
   }
 }
 
+#- warning when the distance distribution is learned from few reads (light data: < 100 reads)...
+check("output", "warning reported when the distance distribution is learned from < 100 reads",
+  any(grepl("read distance distribution learned from only", readLines(PIPELINE_LOG))) & length(list.files(file.path(OUTDIR, "probability"), pattern = "warning.txt$")) == length(SAMPLES))
+
+#- warning when the distance distribution is learned from few reads (light data: < 100 reads)...
+check("output", "warning reported when the distance distribution is learned from < 100 reads",
+  any(grepl("read distance distribution learned from only", readLines(PIPELINE_LOG))) & length(list.files(file.path(OUTDIR, "probability"), pattern = "warning.txt$")) == length(SAMPLES))
+
 #- uniquely mapped reads only (--min_mapq 255)...
 mapq = unlist(lapply(list.files(file.path(OUTDIR, "bed"), pattern = "bam$", recursive = TRUE, full.names = TRUE), function(b) as.integer(system(paste(SAMTOOLS, "view", b, "| cut -f5"), intern = TRUE))))
 check("output", paste0("only uniquely mapped reads used (--min_mapq 255): ", length(mapq), " reads"), length(mapq) > 0 & all(mapq == 255))

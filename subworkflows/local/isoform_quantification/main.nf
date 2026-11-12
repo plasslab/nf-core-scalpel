@@ -31,6 +31,8 @@ workflow ISOFORM_QUANTIFICATION {
         params.binsize
     )
     ch_versions = ch_versions.mix(PROBABILITY_DISTRIBUTION.out.versions)
+    // Warn when the distance distribution is learned from too few reads
+    PROBABILITY_DISTRIBUTION.out.warning.subscribe{ log.warn(it.text.trim()) }
     PROBABILITY_DISTRIBUTION.out.probabilities.join(mapped_reads).map{
         it = [it[0], it[1], it[3]]
     }.transpose().set{ reads_probs }

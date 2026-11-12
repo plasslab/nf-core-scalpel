@@ -16,6 +16,7 @@ parser$add_argument("--bins", required = TRUE, help = "Bins size for probability
 parser$add_argument("--threads", type = "integer", help = "Number of threads")
 parser$add_argument("--OUTPUT_PROB", required = TRUE, help = "Path to output probability file")
 parser$add_argument("--OUTPUT_PDF", required = TRUE, help = "Path to output PDF file")
+parser$add_argument("--min_reads", type = "integer", default = 100, help = "Minimum number of reads for a reliable distribution (warning below)")
 args <- parser$parse_args()
 
 BINS = args$bins %>% as.numeric()
@@ -66,6 +67,16 @@ colnames(read_tab) = c("transcriptomic_distance", "counts")
 #let's set interval axis (anchored at 0, robust to one-sided distances #34)
 if(nrow(read_tab) == 0){
   stop("No reads left for the probability distribution: it is learned from genes with a single selected isoform, and none has reads after filtering (gene_fraction). Check that annotation & reads chromosome names match, and that the sample has enough expressed genes.")
+}
+#- few reads: the distribution is unreliable (many distances never observed get a null probability)...
+NB_READS = sum(read_tab$counts)
+message("Reads used for the probability distribution: ", NB_READS, " (", uniqueN(reads$gene_name), " single-isoform genes)")
+if(NB_READS < args$min_reads){
+  warning_msg = paste0(sub("\\.prob$", "", basename(args$OUTPUT_PROB)), ": read distance distribution learned from only ", NB_READS,
+    " reads (< ", args$min_reads, ", ", uniqueN(reads$gene_name), " single-isoform genes): isoform quantification is unreliable ",
+    "(distances never observed get a null probability, the EM relies on the isoform TPM fractions). Typical of very small / test datasets.")
+  message("WARNING: ", warning_msg)
+  writeLines(warning_msg, sub("\\.prob$", ".warning.txt", args$OUTPUT_PROB))
 }
 DIST_MIN = min(read_tab$transcriptomic_distance)
 DIST_MAX = max(read_tab$transcriptomic_distance)

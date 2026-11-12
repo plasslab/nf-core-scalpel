@@ -15,6 +15,7 @@ process PROBABILITY_DISTRIBUTION {
 
     output:
         tuple val("${meta}"), path("${meta}.prob"), path("${meta}.pdf"), emit: probabilities
+        path("${meta}.warning.txt"), emit: warning, optional: true
         path('versions.yml'), emit: versions
 
     script:
