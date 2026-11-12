@@ -105,7 +105,8 @@ workflow READS_PROCESSING {
     // Convert BAM to BED files
     BED_CONVERSION(
         SEQNAMES_CHECK.out.checked_bams.combine(ch_all_transcripts.map{ it=it[0] }),
-        params.sequencing_platform
+        params.sequencing_platform,
+        params.min_mapq
     )
     ch_versions = ch_versions.mix(BED_CONVERSION.out.versions)
     

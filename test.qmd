@@ -184,6 +184,10 @@ for(s in SAMPLES){
   }
 }
 
+#- uniquely mapped reads only (--min_mapq 255)...
+mapq = unlist(lapply(list.files(file.path(OUTDIR, "bed"), pattern = "bam$", recursive = TRUE, full.names = TRUE), function(b) as.integer(system(paste(SAMTOOLS, "view", b, "| cut -f5"), intern = TRUE))))
+check("output", paste0("only uniquely mapped reads used (--min_mapq 255): ", length(mapq), " reads"), length(mapq) > 0 & all(mapq == 255))
+
 #- read distance filter (--distance_reads 600) separate from the collapsing window (--distance_profile 500)...
 max_dist = max(sapply(list.files(file.path(OUTDIR, "reads"), pattern = ".fst$", full.names = TRUE), function(f) max(fst_to_dt(f)$start.rdR)))
 check("output", paste0("reads kept up to --distance_reads 600 nt (not the 500 nt collapsing window): max ", max_dist), max_dist > 500 & max_dist <= 600)

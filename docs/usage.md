@@ -142,6 +142,15 @@ GSE104556 test data, 200 nt cuts fragments removed despite a 3' end peak on thei
 ~78% compared to 60 nt, at the cost of skipping sites closer than 200 nt. Use
 `--distance_ip 60` to reproduce the original behaviour.
 
+## Reads used (`--min_mapq`)
+
+By default only uniquely mapped reads are used (`--min_mapq 255`, the MAPQ of unique alignments
+in Cell Ranger, STARsolo and STAR / Drop-seq BAMs), i.e. the reads counted in the gene count
+matrix. The isoform counts are the EM isoform proportions x the gene counts: multi-mapped reads,
+not counted in the gene matrix, can come from another copy of a paralog family and bias the
+proportions. On GSE104556, 25% of the reads used on chrX/chrY (15% of the chr17 reads) are
+multi-mapped. Use `--min_mapq 0` to keep all reads, as the original SCALPEL.
+
 ## Isoform selection (collapsing)
 
 Within each gene, isoforms whose 3' ends are within `--distance_3end` (default 100 nt) of each other

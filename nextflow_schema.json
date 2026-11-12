@@ -266,6 +266,15 @@
                     "help_text": "Isoforms with identical exons (genomic splice sites) within this window are collapsed. Default 500: structural differences further upstream are covered by < 7% of the reads (GSE104556). Original SCALPEL: 600 (shared with --distance_reads).",
                     "fa_icon": "fas fa-ruler"
                 },
+                "min_mapq": {
+                    "type": "integer",
+                    "default": 255,
+                    "minimum": 0,
+                    "maximum": 255,
+                    "description": "Minimum mapping quality of the reads used (255: uniquely mapped reads only).",
+                    "help_text": "Default 255: uniquely mapped reads only (Cell Ranger, STARsolo, STAR / Drop-seq), i.e. the reads counted in the gene count matrix. Multi-mapped reads (e.g. paralog families) can come from another gene copy and bias the isoform proportions. Original SCALPEL: 0 (all reads).",
+                    "fa_icon": "fas fa-filter"
+                },
                 "distance_reads": {
                     "type": "integer",
                     "default": 600,

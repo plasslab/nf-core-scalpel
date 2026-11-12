@@ -46,7 +46,9 @@ gene_counts = reads %>%
     summarise(nb.reads = n()) %>%
     data.table()
 gene_quantiles = stats::quantile(gene_counts$nb.reads, seq(0,1,0.01))
-gene_tokeep = dplyr::filter(gene_counts, nb.reads < gene_quantiles[[THRESHOLD_FRAC]])$gene_name
+#- top expressed genes excluded: genes above the quantile (<=: genes tied at the quantile are kept, at low depth
+#- many genes share the same small count and a strict < discarded far more than the top fraction, or all genes)...
+gene_tokeep = dplyr::filter(gene_counts, nb.reads <= gene_quantiles[[THRESHOLD_FRAC]])$gene_name
 
 reads = reads %>%
     filter(gene_name %in% gene_tokeep) %>%

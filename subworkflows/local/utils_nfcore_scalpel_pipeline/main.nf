@@ -93,6 +93,7 @@ Pipeline options
   libtype             : ${params.libtype}
   distance_profile    : ${params.distance_profile}
   distance_reads      : ${params.distance_reads}
+  min_mapq            : ${params.min_mapq}
   distance_3end       : ${params.distance_3end}
   distance_ip         : ${params.distance_ip}
   ip_reference        : ${params.ip_reference ?: 'generated from --genome'}

@@ -10,6 +10,7 @@ process BED_CONVERSION {
     input:
         tuple val(meta), path(bam_file), path(bai_file), path(barcodes_file), val(annotated_seqname)
         val sequencing_platform
+        val min_mapq
 
     output:
         tuple val("${annotated_seqname}"), val("${meta.id}"), path("${annotated_seqname}.bam"), emit: bed_files, optional: true
@@ -26,6 +27,7 @@ process BED_CONVERSION {
     samtools view \
         -b ${bam_file} \
         -X ${bai_file} ${filter_cmd} \
+        -q ${min_mapq} \
         --keep-tag "${barcode_tag},${umi_tag}" ${annotated_seqname} | samtools sort -@ ${task.cpus} > tmp.bam
     #Remove all PCR duplicates ... (as original SCALPEL bam_splitting)
     samtools markdup tmp.bam ${annotated_seqname}_tmp.bam -r --barcode-tag ${barcode_tag} --barcode-tag ${umi_tag}
