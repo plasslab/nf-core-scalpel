@@ -31,6 +31,9 @@ reads = fread(
   nThread = args$threads,
   fill = TRUE
 )
+#- reads without UMI (e.g. no corrected UB tag in Cell Ranger BAM) are discarded (plasslab/SCALPEL#1)...
+message("Reads without UMI (discarded): ", sum(is.na(reads$umi) | reads$umi == ""))
+reads = reads[!is.na(umi) & umi != ""]
 reads = reads %>%
   dplyr::mutate(tags = paste(bc, umi, sep = "::")) %>%
   dplyr::select(-bc, -umi)

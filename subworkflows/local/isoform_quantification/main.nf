@@ -59,7 +59,7 @@ workflow ISOFORM_QUANTIFICATION {
     ch_versions = ch_versions.mix(EM_ALGORITHM.out.versions)
 
     // Extract DGE count matrix for each sample
-    // files: [fastq_1, fastq_2, cranger_path, bam, bai, dge_dir, barcodes]
+    // files: [[fastq_1, ...], [fastq_2, ...], cranger_path, bam, bai, dge_dir, barcodes]
     ch_samplesheet.map{ meta, files -> tuple(meta.id, files[5]) }.join(
         EM_ALGORITHM.out.em_results.groupTuple(by: 0)
     ).map{

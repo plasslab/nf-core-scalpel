@@ -92,6 +92,7 @@ Pipeline options
   sequencing_platform : ${params.sequencing_platform}
   libtype             : ${params.libtype}
   distance_profile    : ${params.distance_profile}
+  distance_reads      : ${params.distance_reads}
   distance_3end       : ${params.distance_3end}
   distance_ip         : ${params.distance_ip}
   ip_reference        : ${params.ip_reference ?: 'generated from --genome'}
@@ -137,7 +138,12 @@ Pipeline options
         }
         .map {
             meta, fastqs ->
-                return [ meta, fastqs.flatten() ]
+                // Several runs (FASTQ pairs) of a sample are quantified together & share the same Cell Ranger/STARsolo/Drop-seq output (#18)
+                // files: [[fastq_1, ...], [fastq_2, ...], cranger_path, bam, bai, dge_dir, barcodes]
+                if( fastqs.collect{ it[2..-1] }.unique().size() > 1 ) {
+                    error("Samplesheet error -> sample '${meta.id}': rows of the same sample (several runs) must share the same cranger_path and dge.")
+                }
+                return [ meta, [ fastqs.collect{ it[0] }, fastqs.collect{ it[1] } ] + fastqs[0][2..-1] ]
         }
         .set { ch_samplesheet }
 

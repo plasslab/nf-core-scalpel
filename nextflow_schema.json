@@ -261,10 +261,17 @@
                 },
                 "distance_profile": {
                     "type": "integer",
-                    "default": 600,
-                    "description": "Distance threshold (bp) for reads mapping to transcript profile.",
-                    "help_text": "Maximum transcriptomic distance (in bp) from the 3' end to consider when mapping reads to transcripts.",
+                    "default": 500,
+                    "description": "Window (nt from the furthest 3' end) in which isoforms with close 3' ends are compared for collapsing.",
+                    "help_text": "Isoforms with identical exons (genomic splice sites) within this window are collapsed. Default 500: structural differences further upstream are covered by < 7% of the reads (GSE104556). Original SCALPEL: 600 (shared with --distance_reads).",
                     "fa_icon": "fas fa-ruler"
+                },
+                "distance_reads": {
+                    "type": "integer",
+                    "default": 600,
+                    "description": "Maximum transcriptomic distance (nt) of a read from the isoform 3' end.",
+                    "help_text": "Fragments with a read further than this distance from the 3' end of an isoform are discarded for this isoform (beyond ~600 nt, the read density is gene body background). Original SCALPEL: 600 (shared with --distance_profile).",
+                    "fa_icon": "fas fa-ruler-horizontal"
                 },
                 "distance_3end": {
                     "type": "integer",

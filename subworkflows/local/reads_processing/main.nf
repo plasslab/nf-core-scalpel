@@ -47,7 +47,7 @@ workflow READS_PROCESSING {
     }
 
     // Extract BAM files, index & defaults Barcodes (resolved in PIPELINE_INITIALISATION)
-    // files: [fastq_1, fastq_2, cranger_path, bam, bai, dge, barcodes]
+    // files: [[fastq_1, ...], [fastq_2, ...], cranger_path, bam, bai, dge, barcodes]
     if( params.sequencing_platform == 'dropseq' ) {
         // Drop-seq: cells = barcodes of the DGE count matrix
         DGE_BARCODES(
@@ -121,7 +121,7 @@ workflow READS_PROCESSING {
     READS_MAPPING_AND_FILTERING(
         reads_and_annots,
         file("${projectDir}/subworkflows/local/reads_processing/bin/reads_mapping_and_filtering.R"),
-        params.distance_profile
+        params.distance_reads
     )
     ch_versions = ch_versions.mix(READS_MAPPING_AND_FILTERING.out.versions)
 

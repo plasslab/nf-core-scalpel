@@ -26,7 +26,7 @@ workflow ANNOTATION_PROCESSING {
 
     // Load fastq files (paths resolved & checked in PIPELINE_INITIALISATION)
     ch_samplesheet.map{
-        sample_id, reads -> tuple(sample_id, [file(reads[0]), file(reads[1])])
+        sample_id, reads -> tuple(sample_id, [reads[0], reads[1]].transpose().flatten().collect{ file(it) })
     }.set{ ch_samplesheet2 }
 
     // Bulk Quantification of samples using Salmon

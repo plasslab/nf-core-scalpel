@@ -38,6 +38,18 @@ SRR6129051,reads/SRR6129051_R1.fastq.gz,reads/SRR6129051_R2.fastq.gz,cellranger/
   message naming the sample and the column.
 - Do not use `NA` columns: the FASTQ files are required (pseudobulk quantification).
 
+### Several runs (FASTQ pairs) of one sample
+
+A sample sequenced in several runs or lanes is given as several rows with the same `sample` name,
+one FASTQ pair per row, all pointing to the same `cranger_path` (and `dge` for Drop-seq): all its
+FASTQ pairs are quantified together by salmon.
+
+```csv
+sample,fastq_1,fastq_2,cranger_path
+S1,S1_L001_R1.fastq.gz,S1_L001_R2.fastq.gz,cellranger/S1
+S1,S1_L002_R1.fastq.gz,S1_L002_R2.fastq.gz,cellranger/S1
+```
+
 ### Supported sample layouts (`cranger_path`)
 
 The pipeline detects the layout of each sample directory:
@@ -133,11 +145,18 @@ GSE104556 test data, 200 nt cuts fragments removed despite a 3' end peak on thei
 ## Isoform selection (collapsing)
 
 Within each gene, isoforms whose 3' ends are within `--distance_3end` (default 50 nt) of each other
-are compared over the last `--distance_profile` nt (default 600) from the furthest 3' end. Isoforms
+are compared over the last `--distance_profile` nt (default 500) from the furthest 3' end. Isoforms
 with identical exons in this window (same genomic splice sites) cannot be told apart by 3'-tagged
 reads and are collapsed into the most expressed one (pseudobulk TPM), whose terminal exon is
 extended to the furthest 3' end of the group (`isoform/*.annots.gz`, column `transcript_collapseds`).
 Exons of the same length at different genomic positions are different isoforms (not collapsed).
+
+The collapsing window (`--distance_profile`, 500 nt) and the maximum read distance to the isoform
+3' end (`--distance_reads`, 600 nt) are separate: the original SCALPEL used 600 nt for both. On
+GSE104556, a structural difference 500-600 nt upstream of the 3' end is covered by 3-7% of the
+reads, so such isoforms were mostly split by their TPM prior (250 isoforms, 1.3%, now collapsed),
+whereas reads keep the 3' signal up to ~600 nt (further upstream, the read density is gene body
+background). Use `--distance_profile 600` to reproduce the original isoform selection.
 
 ## Isoform quantification (EM)
 

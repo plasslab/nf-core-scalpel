@@ -184,6 +184,10 @@ for(s in SAMPLES){
   }
 }
 
+#- read distance filter (--distance_reads 600) separate from the collapsing window (--distance_profile 500)...
+max_dist = max(sapply(list.files(file.path(OUTDIR, "reads"), pattern = ".fst$", full.names = TRUE), function(f) max(fst_to_dt(f)$start.rdR)))
+check("output", paste0("reads kept up to --distance_reads 600 nt (not the 500 nt collapsing window): max ", max_dist), max_dist > 500 & max_dist <= 600)
+
 #- differential isoform usage (samples compared when no --clusters)...
 diu_file = file.path(OUTDIR, "differential", "DIU_table.csv")
 check("output", "DIU_table.csv & iDGE_seurat.RDS written",
@@ -614,6 +618,40 @@ writeLines(c("sample,barcodes", "SRR6129050,missing_barcodes.txt"), bad_whitelis
 res = run_pipeline("whitelist_bad", c("--barcodes_whitelist", bad_whitelist))
 check("#24", "missing whitelist file stops with an explicit message",
   res$status != 0 & any(grepl("Barcodes whitelist error", res$log)))
+```
+
+```{r scenario-runs}
+#| eval: !expr params$scenarios
+#- several runs (FASTQ pairs) of one sample (#18): SRR6129050 split in two runs...
+runs_dir = file.path(TMP, "runs"); dir.create(runs_dir, showWarnings = FALSE)
+for(r in c("R1", "R2")){
+  fq = readLines(gzfile(file.path(LIGHT, "reads", paste0("SRR6129050_", r, ".fastq.gz"))))
+  half = 4 * floor(length(fq) / 8)
+  writeLines(fq[seq_len(half)], gzfile(file.path(runs_dir, paste0("run1_", r, ".fastq.gz"))))
+  writeLines(fq[(half + 1):length(fq)], gzfile(file.path(runs_dir, paste0("run2_", r, ".fastq.gz"))))
+}
+cr = normalizePath(file.path(LIGHT, "cellranger"))
+rd = normalizePath(file.path(LIGHT, "reads"))
+runs_sheet = file.path(runs_dir, "samplesheet.csv")
+writeLines(c("sample,fastq_1,fastq_2,cranger_path",
+  paste("SRR6129050", file.path(runs_dir, "run1_R1.fastq.gz"), file.path(runs_dir, "run1_R2.fastq.gz"), file.path(cr, "SRR6129050"), sep = ","),
+  paste("SRR6129050", file.path(runs_dir, "run2_R1.fastq.gz"), file.path(runs_dir, "run2_R2.fastq.gz"), file.path(cr, "SRR6129050"), sep = ","),
+  paste("SRR6129051", file.path(rd, "SRR6129051_R1.fastq.gz"), file.path(rd, "SRR6129051_R2.fastq.gz"), file.path(cr, "SRR6129051"), sep = ",")), runs_sheet)
+res = run_pipeline("runs", c(), runs_sheet)
+check("#18", "sample with several runs (FASTQ pairs) completes", res$status == 0)
+if(res$status == 0){
+  meta_info = function(dir){
+    info = readLines(file.path(dir, "salmon", "SRR6129050", "aux_info", "meta_info.json"))
+    return(trimws(grep('"num_processed"|"num_mapped"', info, value = TRUE)))
+  }
+  check("#18", "salmon quantifies all runs of the sample (same reads processed & mapped as the single run)",
+    identical(meta_info(res$outdir), meta_info(OUTDIR)))
+}
+#- rows of one sample pointing to different Cell Ranger outputs...
+bad_sheet = file.path(runs_dir, "samplesheet_bad.csv")
+writeLines(c(readLines(runs_sheet)[1:2], sub(file.path(cr, "SRR6129050"), file.path(cr, "SRR6129051"), readLines(runs_sheet)[3], fixed = TRUE), readLines(runs_sheet)[4]), bad_sheet)
+res = run_pipeline("runs_bad", c(), bad_sheet)
+check("#18", "runs of one sample with different cranger_path -> explicit error", res$status != 0 && any(grepl("must share the same cranger_path", res$log)))
 ```
 
 ```{r scenario-fixed-annotation}
