@@ -82,7 +82,7 @@ previous run) can be given instead with `--ip_reference`.
 | `--barcodes_whitelist` | `null`       | CSV file mapping samples to custom barcode whitelist files.        |
 | `--distance_profile`   | `500`        | Window (nt from the 3' end) compared for isoform collapsing.      |
 | `--distance_reads`     | `600`        | Maximum distance (nt) of a read from the isoform 3' end.          |
-| `--distance_3end`      | `50`         | Distance threshold for 3'-end merging.                            |
+| `--distance_3end`      | `100`        | Maximum distance (nt) between 3' ends of collapsed isoforms.      |
 | `--distance_ip`        | `200`        | Distance threshold for internal priming filtering.                |
 | `--gene_fraction`      | `98%`        | Gene fraction threshold for isoform quantification.               |
 | `--binsize`            | `20`         | Bin size for probability distribution computation.                |

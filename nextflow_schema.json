@@ -275,9 +275,9 @@
                 },
                 "distance_3end": {
                     "type": "integer",
-                    "default": 50,
-                    "description": "Distance threshold (bp) for 3' end clustering.",
-                    "help_text": "Maximum distance (in bp) between 3' ends to cluster transcripts together during isoform collapsing.",
+                    "default": 100,
+                    "description": "Maximum distance (nt) between 3' ends of isoforms compared for collapsing.",
+                    "help_text": "Isoforms with 3' ends closer than this distance (and identical exons within --distance_profile) are collapsed. Default 100: below ~100 nt, 3'-tagged reads cannot tell two 3' ends apart (simulation with the GSE104556 read distribution). Original SCALPEL: 50.",
                     "fa_icon": "fas fa-ruler-vertical"
                 },
                 "distance_ip": {

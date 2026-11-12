@@ -16,12 +16,12 @@
             "fastq_1": {
                 "type": "string",
                 "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "errorMessage": "FastQ file for reads 1 (required unless --isoform_annotation is provided) cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
             },
             "fastq_2": {
                 "type": "string",
                 "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 2 cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "errorMessage": "FastQ file for reads 2 (required unless --isoform_annotation is provided) cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
             },
             "cranger_path": {
                 "type": "string",
@@ -32,6 +32,6 @@
                 "errorMessage": "dropseq only: path of the Drop-seq tools DGE count matrix (GENE + one column per cell barcode, .txt or .txt.gz)"
             }
         },
-        "required": ["sample", "fastq_1", "fastq_2", "cranger_path"]
+        "required": ["sample", "cranger_path"]
     }
 }

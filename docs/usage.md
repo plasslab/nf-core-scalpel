@@ -144,7 +144,7 @@ GSE104556 test data, 200 nt cuts fragments removed despite a 3' end peak on thei
 
 ## Isoform selection (collapsing)
 
-Within each gene, isoforms whose 3' ends are within `--distance_3end` (default 50 nt) of each other
+Within each gene, isoforms whose 3' ends are within `--distance_3end` (default 100 nt) of each other
 are compared over the last `--distance_profile` nt (default 500) from the furthest 3' end. Isoforms
 with identical exons in this window (same genomic splice sites) cannot be told apart by 3'-tagged
 reads and are collapsed into the most expressed one (pseudobulk TPM), whose terminal exon is
@@ -157,6 +157,12 @@ GSE104556, a structural difference 500-600 nt upstream of the 3' end is covered 
 reads, so such isoforms were mostly split by their TPM prior (250 isoforms, 1.3%, now collapsed),
 whereas reads keep the 3' signal up to ~600 nt (further upstream, the read density is gene body
 background). Use `--distance_profile 600` to reproduce the original isoform selection.
+
+The default `--distance_3end` is 100 nt (original SCALPEL: 50 nt). Simulating two isoforms with
+identical exons and 3' ends 50-100 nt apart with the GSE104556 read distribution, the per-cell
+fraction estimates are no better than an uninformative guess and pooled estimates are off by
+6-15 points, so such isoforms are collapsed (276 more isoforms, 1.4%, on GSE104556). Use
+`--distance_3end 50 --distance_profile 600` to reproduce the original isoform selection.
 
 ## Isoform quantification (EM)
 
@@ -216,7 +222,9 @@ nextflow run nf-core/scalpel --samplesheet new_samples.csv --isoform_annotation 
 ```
 
 Annotation processing (salmon pseudobulk, isoform selection) is skipped (`--transcriptome`,
-`--gtf` not needed), and the new samples are quantified on exactly the same isoforms. Note that
+`--gtf` not needed), and the new samples are quantified on exactly the same isoforms. The FASTQ
+files are then not used: the samplesheet columns `fastq_1`/`fastq_2` are optional, so samples can
+be given with their BAM / count matrix only (`sample,cranger_path`). Note that
 the isoform set then reflects only the samples of the first run; re-running all samples
 together remains the only way for the annotation to use the full dataset.
 

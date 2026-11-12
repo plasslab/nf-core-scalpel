@@ -125,10 +125,14 @@ Pipeline options
                     error("Samplesheet error -> sample '${meta.id}': column 'dge' (Drop-seq DGE count matrix) is required with --sequencing_platform dropseq.")
                 }
                 def dge_path = dge ? resolveInputPath(dge, base_dir, meta.id, 'dge') : ''
+                // FASTQ files: salmon pseudobulk only, not needed with a fixed --isoform_annotation (BAM input only, #21/#31)
+                if( !params.isoform_annotation && (!fastq_1 || !fastq_2) ) {
+                    error("Samplesheet error -> sample '${meta.id}': columns 'fastq_1' and 'fastq_2' are required (salmon pseudobulk quantification), unless --isoform_annotation is provided.")
+                }
                 // files: [fastq_1, fastq_2, cranger_path, bam, bai, dge_dir, barcodes]
                 [ meta.id, meta, [
-                    resolveInputPath(fastq_1, base_dir, meta.id, 'fastq_1'),
-                    resolveInputPath(fastq_2, base_dir, meta.id, 'fastq_2'),
+                    fastq_1 ? resolveInputPath(fastq_1, base_dir, meta.id, 'fastq_1') : '',
+                    fastq_2 ? resolveInputPath(fastq_2, base_dir, meta.id, 'fastq_2') : '',
                     sample_path
                 ] + resolveSampleLayout(meta.id, sample_path, params.sequencing_platform, dge_path) ]
         }

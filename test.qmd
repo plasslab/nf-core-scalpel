@@ -666,6 +666,19 @@ if(res$status == 0){
       same_idge(file.path(res$outdir, "dge", paste0(s, "_iDGE")), file.path(OUTDIR, "dge", paste0(s, "_iDGE"))))
   }
 }
+#- BAM input only (no FASTQ columns) with a fixed annotation (#21)...
+bam_only_sheet = file.path(TMP, "samplesheet_bam_only.csv")
+writeLines(c("sample,cranger_path", paste0(SAMPLES, ",", normalizePath(file.path("tests/data/light/cellranger", SAMPLES)))), bam_only_sheet)
+res = run_pipeline("bam_only", c("--isoform_annotation", file.path(OUTDIR, "isoform")), bam_only_sheet)
+check("#21", "BAM input only (no FASTQ) with --isoform_annotation completes", res$status == 0)
+if(res$status == 0){
+  for(s in SAMPLES){
+    check("#21", paste0(s, ": iDGE identical to the baseline run (BAM input only)"),
+      same_idge(file.path(res$outdir, "dge", paste0(s, "_iDGE")), file.path(OUTDIR, "dge", paste0(s, "_iDGE"))))
+  }
+}
+res = run_pipeline("bam_only_bad", c(), bam_only_sheet)
+check("#21", "no FASTQ without --isoform_annotation -> explicit error", res$status != 0 && any(grepl("'fastq_1' and 'fastq_2' are required", res$log)))
 ```
 
 ```{r scenario-ip-reference}
