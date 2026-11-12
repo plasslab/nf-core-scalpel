@@ -115,8 +115,8 @@ Intermediate files (`salmon/`, `transcript/`, `bed/`, `reads/`, `ip/`, `fragment
 
 ### Downstream analysis
 
-- [10X Chromium example](https://raw.githack.com/plasslab/SCALPEL/refs/heads/dev/docs/chromium.html) · [downstream analysis](https://raw.githack.com/plasslab/SCALPEL/refs/heads/dev/docs/chromium_downstream.html)
-- [Drop-seq example](https://raw.githack.com/plasslab/SCALPEL/refs/heads/dev/docs/dropseq.html) · [downstream analysis](https://raw.githack.com/plasslab/SCALPEL/refs/heads/dev/docs/dropseq_downstream.html)
+- [10X Chromium example](https://raw.githack.com/plasslab/nf-core-scalpel/refs/heads/dev/docs/vignettes/chromium.html) · [downstream analysis](https://raw.githack.com/plasslab/nf-core-scalpel/refs/heads/dev/docs/vignettes/chromium_downstream.html)
+- [Drop-seq example](https://raw.githack.com/plasslab/nf-core-scalpel/refs/heads/dev/docs/vignettes/dropseq.html) · [downstream analysis](https://raw.githack.com/plasslab/nf-core-scalpel/refs/heads/dev/docs/vignettes/dropseq_downstream.html)
 
 ### Testing
 
