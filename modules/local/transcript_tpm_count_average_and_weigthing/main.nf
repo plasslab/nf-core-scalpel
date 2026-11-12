@@ -61,14 +61,17 @@ process TRANSCRIPT_TPM_COUNT_AVERAGE_AND_WEIGTHING{
         # if transcriptID is not in quant_data, assign a very small constant to avoid 0 weigth score (meanTPM = 1e-12)
         dplyr::mutate(meanTPM = ifelse(is.na(meanTPM), 1e-12, meanTPM))
 
-    #calculate transcript bulk average TPM per gene
-    gtf = gtf %>%
+    #calculate transcript bulk average TPM per gene (one value per transcript, as original quantification_processing.R;
+    #summing over the exon rows weighted each transcript by its number of exons)
+    tpm_perc = gtf %>%
+        dplyr::distinct(gene_id, transcript_id, meanTPM) %>%
         dplyr::group_by(gene_id) %>%
-        dplyr::mutate(
-            TPM_perc = round(meanTPM / sum(meanTPM), 12),
-            width = width - 1
-        ) %>%
+        dplyr::mutate(TPM_perc = round(meanTPM / sum(meanTPM), 12)) %>%
         dplyr::ungroup() %>%
+        dplyr::select(transcript_id, TPM_perc)
+    gtf = gtf %>%
+        dplyr::left_join(tpm_perc, by = "transcript_id") %>%
+        dplyr::mutate(width = width - 1) %>%
         arrange(seqnames,start,desc(end)) %>% 
         dplyr::group_by(transcript_name) %>%
         dplyr::mutate(exon_number = ifelse(strand == "+", seq(n(), 1), 1:n())) %>%
