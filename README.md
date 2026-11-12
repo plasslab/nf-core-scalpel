@@ -79,7 +79,7 @@ nextflow run nf-core/scalpel \
 | `--barcodes_whitelist` | `null`       | CSV file mapping samples to custom barcode whitelist files.        |
 | `--distance_profile`   | `600`        | Distance threshold for 3'-end profile-based isoform collapsing.   |
 | `--distance_3end`      | `50`         | Distance threshold for 3'-end merging.                            |
-| `--distance_ip`        | `60`         | Distance threshold for internal priming filtering.                |
+| `--distance_ip`        | `200`        | Distance threshold for internal priming filtering.                |
 | `--gene_fraction`      | `98%`        | Gene fraction threshold for isoform quantification.               |
 | `--binsize`            | `20`         | Bin size for probability distribution computation.                |
 | `--libtype`            | `A`          | Salmon library type (automatic detection by default).             |

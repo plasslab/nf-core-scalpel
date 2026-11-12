@@ -96,11 +96,17 @@ to `--ip_reference` as plain, `.gz` or `.tar.gz` files. The reference is split b
 once at the start of the run.
 
 **Filtering rule (original SCALPEL).** For each isoform, the internal priming site closest to
-its 3' end, at least `--distance_ip` nt away (default 60), is located on its exons. Every
+its 3' end, at least `--distance_ip` nt away (default 200), is located on its exons. Every
 fragment (cell + UMI) lying entirely upstream of that site is discarded for this isoform, as it
 more likely originates from oligo-dT priming on that A-rich stretch than from the genuine 3'
 end. Sites closer than `--distance_ip` to the 3' end are ignored. The rule applies to both
 strands.
+
+The default of 200 nt (original SCALPEL: 60) keeps sites inside the bulk of an isoform's own
+read distribution (median 110-130 nt from the 3' end) from discarding its genuine reads. On the
+GSE104556 test data, 200 nt cuts fragments removed despite a 3' end peak on their isoform by
+~78% compared to 60 nt, at the cost of skipping sites closer than 200 nt. Use
+`--distance_ip 60` to reproduce the original behaviour.
 
 ## Optional inputs
 

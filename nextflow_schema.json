@@ -269,9 +269,9 @@
                 },
                 "distance_ip": {
                     "type": "integer",
-                    "default": 60,
+                    "default": 200,
                     "description": "Distance threshold (bp) for internal priming filtering.",
-                    "help_text": "Maximum distance (in bp) used when filtering reads against the internal priming reference.",
+                    "help_text": "Minimum distance (in bp) from the isoform 3' end for an internal priming site to be considered. Fragments lying entirely upstream of the closest site beyond this distance are discarded. Default 200 (original SCALPEL: 60).",
                     "fa_icon": "fas fa-ruler"
                 },
                 "gene_fraction": {
