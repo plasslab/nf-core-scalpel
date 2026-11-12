@@ -130,6 +130,16 @@ GSE104556 test data, 200 nt cuts fragments removed despite a 3' end peak on thei
 ~78% compared to 60 nt, at the cost of skipping sites closer than 200 nt. Use
 `--distance_ip 60` to reproduce the original behaviour.
 
+## Isoform quantification (EM)
+
+For each cell and gene, the isoform abundances are estimated by an EM algorithm from the
+fragment probabilities (read distances to the isoform 3' ends x isoform TPM fraction). The EM runs
+until no abundance changes by more than `--em_tol` (default `1e-6`, at most `--em_max_iter`
+1000 iterations). The original SCALPEL stopped at a change < 0.01 (30 iterations), before
+isoforms that are never the best explanation of any fragment (e.g. with a 3' end further from all
+the reads than another isoform) reach 0: on GSE104556, 3,271 such estimates kept > 5% of the
+abundance (15 once converged). Use `--em_tol 0.01 --em_max_iter 30` to reproduce it.
+
 ## Optional inputs
 
 ### Cell barcodes whitelist (`--barcodes_whitelist`)

@@ -52,7 +52,9 @@ workflow ISOFORM_QUANTIFICATION {
     // Perform EM algorithm for each sample and chunk of cells
     EM_ALGORITHM(
         cell_chunks,
-        file("${workflow.projectDir}/subworkflows/local/isoform_quantification/bin/em_algorithm.R")
+        file("${workflow.projectDir}/subworkflows/local/isoform_quantification/bin/em_algorithm.R"),
+        params.em_max_iter,
+        params.em_tol
     )
     ch_versions = ch_versions.mix(EM_ALGORITHM.out.versions)
 

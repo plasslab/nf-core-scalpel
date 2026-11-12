@@ -98,6 +98,7 @@ Pipeline options
   salmon_decoys       : ${params.salmon_decoys}
   gene_fraction       : ${params.gene_fraction}
   binsize             : ${params.binsize}
+  em_tol / max_iter   : ${params.em_tol} / ${params.em_max_iter}
   barcodes_whitelist  : ${params.barcodes_whitelist ?: 'not provided'}
 ------------------------------------------------------
 """.stripIndent()

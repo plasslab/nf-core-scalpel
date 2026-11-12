@@ -293,6 +293,20 @@
                     "description": "Bin size (bp) for probability distribution computation.",
                     "help_text": "Size of the bins (in base pairs) used when computing the fragment length probability distribution during isoform quantification.",
                     "fa_icon": "fas fa-th"
+                },
+                "em_max_iter": {
+                    "type": "integer",
+                    "default": 1000,
+                    "description": "Maximum number of EM iterations per cell and gene.",
+                    "help_text": "The EM runs until no isoform abundance changes by more than --em_tol. Original SCALPEL: 30 (with --em_tol 0.01).",
+                    "fa_icon": "fas fa-redo"
+                },
+                "em_tol": {
+                    "type": "number",
+                    "default": 0.000001,
+                    "description": "EM convergence tolerance (maximum change of isoform abundances between iterations).",
+                    "help_text": "Default 1e-6 (EM run to convergence). Original SCALPEL: 0.01, which stops before isoforms supported by no fragment reach 0. Use --em_tol 0.01 --em_max_iter 30 to reproduce it.",
+                    "fa_icon": "fas fa-bullseye"
                 }
             }
         }

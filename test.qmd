@@ -170,6 +170,17 @@ for(s in SAMPLES){
       nrow(idge) > 0 & ncol(idge) > 0 & nrow(idge) == length(features) & ncol(idge) == length(barcodes))
     check("output", paste0(s, ": iDGE counts finite & non-negative"), all(is.finite(idge@x)) & all(idge@x >= 0))
     check("output", paste0(s, ": iDGE features are gene***transcript"), all(grepl("\\*\\*\\*", features)))
+    #- isoform counts of a quantified gene sum to its Cell Ranger count in each cell (EM abundances rounded to 3 decimals)...
+    cr_dir = file.path("tests/data/light/cellranger", s, "outs/filtered_feature_bc_matrix")
+    cr = readMM(file.path(cr_dir, "matrix.mtx.gz"))
+    rownames(cr) = fread(file.path(cr_dir, "features.tsv.gz"), header = FALSE)$V2
+    colnames(cr) = fread(file.path(cr_dir, "barcodes.tsv.gz"), header = FALSE)$V1
+    iso = as(idge, "TsparseMatrix")
+    iso = data.table(gene_name = sub("\\*\\*\\*.*", "", features[iso@i + 1]), bc = barcodes[iso@j + 1], count = iso@x)[, .(isoform_sum = sum(count)), by = .(gene_name, bc)]
+    iso = iso[gene_name %in% rownames(cr) & bc %in% colnames(cr)]
+    iso[, cr_count := cr[cbind(match(gene_name, rownames(cr)), match(bc, colnames(cr)))]]
+    check("output", paste0(s, ": isoform counts sum to the gene count in each cell x gene (", nrow(iso), ")"),
+      nrow(iso) > 0 & all(abs(iso$isoform_sum - iso$cr_count) <= 0.005 * iso$cr_count))
   }
 }
 
@@ -353,6 +364,25 @@ if(status == 0){
   for(i in seq_len(nrow(res))) check("ip_ref", res$case[i], res$result[i] == "PASS")
 } else {
   cat(readLines(file.path(TMP, "ip_reference.log")), sep = "\n")
+}
+```
+
+## EM run to convergence
+
+With the original stopping rule (abundance change < 0.01, 30 iterations), the EM stops before an
+isoform that is never the best explanation of any fragment reaches 0. The EM now runs to
+convergence by default (`--em_tol 1e-6`, `--em_max_iter 1000`); the original settings remain
+available (`tests/unit/em_convergence_test.R`).
+
+```{r em-convergence}
+out_dir = file.path(TMP, "em_convergence")
+status = run_rscript(c("tests/unit/em_convergence_test.R", file.path(BIN_IQ, "em_algorithm.R"), out_dir), file.path(TMP, "em_convergence.log"))
+check("em", "EM convergence test runs", status == 0)
+if(status == 0){
+  res = fread(file.path(out_dir, "checks.tsv"))
+  for(i in seq_len(nrow(res))) check("em", res$case[i], res$result[i] == "PASS")
+} else {
+  cat(readLines(file.path(TMP, "em_convergence.log")), sep = "\n")
 }
 ```
 

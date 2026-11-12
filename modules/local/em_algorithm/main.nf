@@ -10,6 +10,8 @@ process EM_ALGORITHM {
     input:
         tuple val(meta), path(cell_isoform_probabilities)
         path(script)
+        val(max_iter)
+        val(tol)
 
     output:
         tuple val("${meta}"), path("${cell_isoform_probabilities.baseName}_em_results.fst"), emit: em_results
@@ -19,7 +21,9 @@ process EM_ALGORITHM {
     """
     Rscript ${script} \
         --cell ${cell_isoform_probabilities} \
-        --output_path ${cell_isoform_probabilities.baseName}_em_results.fst
+        --output_path ${cell_isoform_probabilities.baseName}_em_results.fst \
+        --max_iter ${max_iter} \
+        --tol ${tol}
 
     # Write versions.yml
     echo '"${task.process}":' > versions.yml

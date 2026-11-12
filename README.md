@@ -85,6 +85,8 @@ previous run) can be given instead with `--ip_reference`.
 | `--distance_ip`        | `200`        | Distance threshold for internal priming filtering.                |
 | `--gene_fraction`      | `98%`        | Gene fraction threshold for isoform quantification.               |
 | `--binsize`            | `20`         | Bin size for probability distribution computation.                |
+| `--em_tol`             | `1e-6`       | EM convergence tolerance (original SCALPEL: `0.01`).              |
+| `--em_max_iter`        | `1000`       | Maximum EM iterations (original SCALPEL: `30`).                   |
 | `--libtype`            | `A`          | Salmon library type (automatic detection by default).             |
 
 ### Reference files
