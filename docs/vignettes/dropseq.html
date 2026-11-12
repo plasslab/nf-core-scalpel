@@ -2338,6 +2338,7 @@ font-size: 12pt;
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">--genome</span> hg38.fa.gz <span class="dt">\</span></span>
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">--outdir</span> results</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
+<p>By default, the <strong>internal priming reference is built by the pipeline</strong> from the genome (<code>--genome hg38.fa.gz</code>), on the chromosomes of the GTF, in parallel with the salmon quantification. It is saved to <code>results/ip_reference/ip_reference.track.gz</code> and can be reused in later runs with <code>--ip_reference</code> (see <a href="#pre-built-internal-priming-reference">Pre-built internal priming reference</a>).</p>
 </section>
 <section id="options" class="level3">
 <h3 class="anchored" data-anchor-id="options">Options</h3>

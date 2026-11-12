@@ -97,6 +97,8 @@ nextflow run plasslab/nf-core-scalpel -r dev \
     --outdir results
 ```
 
+By default, the **internal priming reference is built by the pipeline** from the genome (`--genome hg38.fa.gz`), on the chromosomes of the GTF, in parallel with the salmon quantification. It is saved to `results/ip_reference/ip_reference.track.gz` and can be reused in later runs with `--ip_reference` (see [Pre-built internal priming reference](#pre-built-internal-priming-reference)).
+
 ### Options
 
 #### Cell barcodes
