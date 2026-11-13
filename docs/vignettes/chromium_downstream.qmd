@@ -54,6 +54,8 @@ The functions used in this downstream analysis are provided by the R package sca
 ```{r scalpelR_install, eval=F}
 install.packages("remotes")
 remotes::install_github("Franzx7/scalpelR@dev")
+#- optional, pseudotime of the cells (heatmap along the differentiation)
+BiocManager::install("slingshot")
 library(scalpelR)
 ```
 
@@ -63,6 +65,7 @@ library(scalpelR)
 | `plotUsage`        | Isoform usage (fraction of the gene) per group and sample.                                    |
 | `CoveragePlot`     | Read coverage of a gene per group of cells, from the SCALPEL filtered BAM files.              |
 | `weightedUTR_cell` | Weighted 3' UTR length per cell.                                                              |
+| `plotShiftHeatmap` | Heatmap of the 3' UTR shifts of the genes between groups of cells or along a trajectory.     |
 | `subsetBAM`        | BAM file of the reads of selected cells (e.g. genome browser).                                |
 
 ## Introduction
@@ -332,12 +335,49 @@ idge.obj$wUTRlength = utr3length_tab$wUTRlength.cell[match(colnames(idge.obj), u
 #- colors spread over the quantiles of the cells (gradient visible within each cell type)...
 q = quantile(idge.obj$wUTRlength, seq(.01, .99, length.out = 11), na.rm = T)
 p2 = FeaturePlot(idge.obj, features = "wUTRlength", pt.size = .6, order = F) %>% theme_umap() +
-    scale_color_gradientn(colors = rev(grDevices::hcl.colors(11, "Spectral")), values = scales::rescale(q), limits = range(q),
+    scale_color_gradientn(colors = rev(RColorBrewer::brewer.pal(11, "RdBu")), values = scales::rescale(q), limits = range(q),
                           oob = scales::squish, breaks = c(250, 300, 350, 400, 500, 600), name = "3' UTR\nlength (nt)") +
     guides(color = guide_colorbar(barheight = unit(5, "cm"))) +
     ggtitle("3' UTR length along the differentiation") +
     theme(plot.title = element_text(face = "plain", hjust = 0, size = 15))
 patchwork::wrap_plots(p1, p2, ncol = 2, widths = c(1, 1.1))
+```
+
+### Global 3' UTR shifts
+
+`scalpelR::plotShiftHeatmap` summarizes the 3' UTR changes of many genes: for each gene, the relative 3' UTR length (usage of its isoforms
+weighted by their 3' UTR length, from 0: shortest to 1: longest isoform) in each group of cells and mouse, scaled per gene
+(blue: shorter, red: longer 3' UTR than the gene mean). Here, the 100 most variable genes with a tandem 3' UTR event, split in 3 clusters:
+
+```{r shift_heatmap}
+#| fig-width: 8
+#| fig-height: 9
+p.shift = plotShiftHeatmap(idge.obj, annotation_gr = gtf, group_by = "celltype", sample_by = "orig.ident",
+    groups = c("spermatocytes", "round spermatids", "elongating spermatids"), genes = diu.table, n_clusters = 3)
+p.shift
+```
+
+The genes of each cluster (e.g. early or late 3' UTR shortening) are in the table of the plot:
+
+```{r shift_clusters}
+attr(p.shift, "shift") %>% distinct(cluster, gene_name) %>% group_by(cluster) %>%
+    summarise(genes = n(), examples = paste(head(as.character(gene_name), 8), collapse = ", ")) %>% knitr::kable()
+```
+
+With a pseudotime (here computed with [slingshot](https://bioconductor.org/packages/slingshot) on the gene-level PCA, from the
+spermatocytes), the cells are ordered along the differentiation and pooled in bins of the same number of cells (`order_by`):
+
+```{r pseudotime}
+germ = subset(dge.obj, subset = celltype != "somatic")
+sl = slingshot::slingshot(Embeddings(germ, "pca")[, 1:20], clusterLabels = germ$celltype, start.clus = "spermatocytes")
+idge.obj$pseudotime = slingshot::slingPseudotime(sl)[match(colnames(idge.obj), colnames(germ)), 1]
+```
+
+```{r shift_heatmap_pseudotime}
+#| fig-width: 8
+#| fig-height: 9
+plotShiftHeatmap(idge.obj, annotation_gr = gtf, group_by = "celltype", order_by = "pseudotime", n_bins = 30,
+    groups = c("spermatocytes", "round spermatids", "elongating spermatids"), genes = diu.table, n_clusters = 3)
 ```
 
 ## Further downstream analysis
