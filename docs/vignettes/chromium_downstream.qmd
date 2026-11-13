@@ -313,7 +313,7 @@ The 3' UTR length of each cell (points) per cell type, and along the differentia
 
 ```{r 3utr_plots}
 #| fig-width: 11
-#| fig-height: 4.5
+#| fig-height: 6
 lv = c("spermatocytes", "round spermatids", "elongating spermatids")
 cols = setNames(grDevices::hcl.colors(3, "Dark 3"), lv)
 med = utr3length_tab %>% group_by(group) %>% summarise(m = median(wUTRlength.cell))
@@ -329,8 +329,13 @@ p1 = utr3length_tab %>%
     theme_bw(base_size = 13) + theme(legend.position = "none", panel.grid.major.x = element_blank())
 #- on the UMAP...
 idge.obj$wUTRlength = utr3length_tab$wUTRlength.cell[match(colnames(idge.obj), utr3length_tab$cells)]
-p2 = FeaturePlot(idge.obj, features = "wUTRlength", pt.size = .5, order = F, max.cutoff = "q99", min.cutoff = "q1") %>% theme_umap() +
-    scale_color_viridis_c(option = "B", name = "3' UTR\nlength (nt)") + ggtitle("3' UTR length along the differentiation") +
+#- colors spread over the quantiles of the cells (gradient visible within each cell type)...
+q = quantile(idge.obj$wUTRlength, seq(.01, .99, length.out = 11), na.rm = T)
+p2 = FeaturePlot(idge.obj, features = "wUTRlength", pt.size = .6, order = F) %>% theme_umap() +
+    scale_color_gradientn(colors = rev(grDevices::hcl.colors(11, "Spectral")), values = scales::rescale(q), limits = range(q),
+                          oob = scales::squish, breaks = c(250, 300, 350, 400, 500, 600), name = "3' UTR\nlength (nt)") +
+    guides(color = guide_colorbar(barheight = unit(5, "cm"))) +
+    ggtitle("3' UTR length along the differentiation") +
     theme(plot.title = element_text(face = "plain", hjust = 0, size = 15))
 patchwork::wrap_plots(p1, p2, ncol = 2, widths = c(1, 1.1))
 ```
