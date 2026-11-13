@@ -101,10 +101,17 @@ results/isoform
 
 ## Gene-level analysis: cell types
 
-We first annotate the cells with a standard gene-level analysis of the Cell Ranger count matrices. Low-quality cells (less than 1000 detected genes or
-more than 10% of mitochondrial reads, ~35% of the Cell Ranger cells) are discarded: they blur the isoform-level analysis even more than the gene-level one,
-as their few UMIs are split between the isoforms of each gene. The cell types are then annotated with marker genes of the spermatogenesis stages
-(spermatocytes, round spermatids, elongating spermatids) and of the somatic cells.
+We first annotate the cells with a standard gene-level analysis of the Cell Ranger count matrices.
+
+::: {.callout-important}
+**Cell quality control.** Cell Ranger (>= 7) calls ~11,700 barcodes on these samples, but the number of genes per barcode is bimodal: ~2,400 cells
+with ~5,000 genes, and ~9,000 barcodes with ~1,000 genes (droplets with little RNA, mostly ambient transcripts). These low-RNA barcodes form a mixed
+cloud in the UMAPs and blur the isoform-level analysis even more than the gene-level one, as their few UMIs are split between the isoforms of each
+gene. We keep the cells with >= 3000 genes (valley of the distribution) and < 10% mitochondrial reads.
+:::
+
+The cell types are then annotated with marker genes of the spermatogenesis stages (spermatocytes, round spermatids, elongating spermatids) and of the
+somatic cells.
 
 ```{r gene_analysis}
 #- Cell Ranger gene counts of the two samples...
@@ -116,10 +123,11 @@ dge.obj = lapply(c("SRR6129050", "SRR6129051"), function(s){
 })
 dge.obj = merge(dge.obj[[1]], dge.obj[[2]], add.cell.ids = c("SRR6129050", "SRR6129051")) %>% JoinLayers()
 
-#- quality control: >= 1000 genes & < 10% mitochondrial reads...
+#- quality control: >= 3000 genes & < 10% mitochondrial reads...
 dge.obj[["percent.mt"]] = PercentageFeatureSet(dge.obj, pattern = "^mt-")
-VlnPlot(dge.obj, features = c("nFeature_RNA", "percent.mt"), group.by = "orig.ident", pt.size = 0, log = T)
-dge.obj = subset(dge.obj, subset = nFeature_RNA >= 1000 & percent.mt < 10)
+ggplot(dge.obj[[]], aes(nFeature_RNA, fill = orig.ident)) + geom_histogram(bins = 80) + scale_x_log10() +
+    geom_vline(xintercept = 3000, linetype = 2) + xlab("genes per barcode") + theme_bw(base_size = 12)
+dge.obj = subset(dge.obj, subset = nFeature_RNA >= 3000 & percent.mt < 10)
 
 dge.obj = dge.obj %>% NormalizeData(verbose = F) %>% FindVariableFeatures(nfeatures = 3000, verbose = F) %>%
     ScaleData(verbose = F) %>% RunPCA(npcs = 30, verbose = F) %>% FindNeighbors(dims = 1:20, verbose = F) %>%
@@ -164,15 +172,19 @@ idge.obj
 
 ### Dimensionality reduction and clustering
 
-The isoform quantification can be used as a gene-level count matrix. Isoforms detected in less than 10 cells are discarded:
+The isoform quantification can be used as a gene-level count matrix. For the dimensionality reduction only, isoforms detected in less than 10 cells
+are discarded (all isoforms are kept for the differential isoform usage):
 
 ```{r isoform_umap}
 #| fig-width: 7
 #| fig-height: 4.5
-idge.obj = subset(idge.obj, features = rownames(idge.obj)[Matrix::rowSums(LayerData(idge.obj, layer = "counts") > 0) >= 10])
+idge.umap = subset(idge.obj, features = rownames(idge.obj)[Matrix::rowSums(LayerData(idge.obj, layer = "counts") > 0) >= 10])
 #- as isoform data is more sparse, we use a higher number of variable features
-idge.obj = idge.obj %>% NormalizeData(verbose = F) %>% FindVariableFeatures(nfeatures = 6000, verbose = F) %>%
+idge.umap = idge.umap %>% NormalizeData(verbose = F) %>% FindVariableFeatures(nfeatures = 6000, verbose = F) %>%
     ScaleData(verbose = F) %>% RunPCA(npcs = 30, verbose = F) %>% RunUMAP(dims = 1:20, verbose = F)
+#- UMAP coordinates & normalized data on the object with all the isoforms...
+idge.obj = NormalizeData(idge.obj, verbose = F)
+idge.obj[["umap"]] = idge.umap[["umap"]]
 DimPlot(idge.obj, group.by = "celltype", label = T, repel = T, pt.size = .5, label.size = 5) %>%
     theme_umap() + ggtitle("iDGE-based UMAP")
 ```
@@ -220,51 +232,55 @@ diu.table %>% filter(event_type == "tandem_3UTR") %>% distinct(comparison, gene_
 
 ### Isoform usage of a gene
 
-For example, the gene **Reep1** uses its proximal 3' end (Reep1-202) in round spermatids and its distal 3' end (Reep1-201) in the other cells,
-in both mice:
+For example, the gene **Mdm2** uses more its proximal 3' end (shorter 3' UTR) in round spermatids than in the other cells, in both mice:
 
-```{r reep1_table}
-diu.table %>% filter(gene_name == "Reep1", comparison == "round spermatids_vs_rest") %>%
+```{r mdm2_table}
+diu.table %>% filter(gene_name == "Mdm2", comparison == "round spermatids_vs_rest") %>%
     select(transcript_name, event_type, direction, delta_3end, counts.group1, counts.group2, PU.group1, PU.group2, delta_PU, dist_3end, p.value.adjusted, replicated, delta_PU_by_sample) %>%
     mutate(p.value.adjusted = format(p.value.adjusted, digits = 2)) %>%
     knitr::kable(digits = 3)
 ```
 
-```{r reep1_usage}
+```{r mdm2_usage}
 #| fig-width: 8
 #| fig-height: 4
-plotUsage(idge.obj, gene_in = "Reep1", group_by = "celltype", sample_by = "orig.ident", isoform_annotation = "results/isoform",
+plotUsage(idge.obj, gene_in = "Mdm2", group_by = "celltype", sample_by = "orig.ident", isoform_annotation = "results/isoform",
     groups = c("spermatocytes", "round spermatids", "elongating spermatids"))
 ```
 
-The isoform expression can also be visualized on the UMAP:
+The expression of its two most changing isoforms can also be visualized on the UMAP:
 
-```{r reep1_umap}
+```{r mdm2_umap}
 #| fig-width: 9
 #| fig-height: 4
-FeaturePlot(idge.obj, features = c("Reep1***Reep1-202", "Reep1***Reep1-201"), order = T, pt.size = .5, cols = c("gray85", "red"))
+mdm2 = diu.table %>% filter(gene_name == "Mdm2", comparison == "round spermatids_vs_rest") %>% arrange(-abs(delta_PU)) %>% head(2)
+FeaturePlot(idge.obj, features = mdm2$gene.tr, order = T, pt.size = .5, cols = c("gray85", "red"))
 ```
 
 ### Read coverage
 
 `scalpelR::CoveragePlot` plots the coverage of the reads used by SCALPEL (`filtered_bams`) for each group of cells, normalized by the number of cells,
-with the structure of the isoforms (thick: CDS, thin: UTR):
+with the structure of the isoforms (thick: CDS, thin: UTR, arrows: strand):
 
-```{r reep1_coverage}
+```{r mdm2_coverage}
 #| fig-width: 9
-#| fig-height: 5
+#| fig-height: 5.5
 gtf = rtracklayer::import("refs/gencode.vM23.annotation.gtf.gz")
 bams = c(SRR6129050 = "results/filtered_bams/SRR6129050_filtered.bam", SRR6129051 = "results/filtered_bams/SRR6129051_filtered.bam")
-CoveragePlot(idge.obj, bamfiles = bams, gene_in = "Reep1", genome_gr = gtf, group_by = "celltype",
-    groups = c("spermatocytes", "round spermatids", "elongating spermatids"), distZOOM = 3500, extend = 500)
+CoveragePlot(idge.obj, bamfiles = bams, gene_in = "Mdm2", genome_gr = gtf, group_by = "celltype",
+    groups = c("spermatocytes", "round spermatids", "elongating spermatids"), distZOOM = 6000, extend = 500)
 ```
 
-Isoform switches between alternative terminal exons are also detected, e.g. **Zfhx3** (no 3' UTR direction: the isoforms end in different exons):
+Isoform switches between alternative terminal exons are also detected (no 3' UTR direction: the isoforms end in different exons), e.g. the most
+supported one in round spermatids, replicated in both mice:
 
-```{r zfhx3_usage}
+```{r alt_gene}
 #| fig-width: 8
 #| fig-height: 4
-plotUsage(idge.obj, gene_in = "Zfhx3", group_by = "celltype", sample_by = "orig.ident", isoform_annotation = "results/isoform",
+alt_gene = diu.table %>% filter(comparison == "round spermatids_vs_rest", event_type == "alternative_terminal_exon", replicated == TRUE) %>%
+    distinct(gene_name, max_delta_PU, umis.group1, umis.group2) %>% arrange(-pmin(umis.group1, umis.group2) * max_delta_PU) %>% pull(gene_name) %>% head(1)
+alt_gene
+plotUsage(idge.obj, gene_in = alt_gene, group_by = "celltype", sample_by = "orig.ident", isoform_annotation = "results/isoform",
     groups = c("spermatocytes", "round spermatids", "elongating spermatids"))
 ```
 
