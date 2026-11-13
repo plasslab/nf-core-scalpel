@@ -265,8 +265,8 @@ takes ~1.5 min with `--diu_test permutation` (6 CPUs).
 For both tests, the p-values are adjusted (BH) once per gene and comparison. Genes with a differential
 isoform usage are those with an adjusted p-value < 0.05, a usage change of at least `--diu_min_delta`
 for one tested isoform (`max_delta_PU`, default 0.1; isoforms with a smaller change: `thr.var`)
-**and**, when clusters are compared across several samples, a change that is not contradicted between
-samples (`replicated` not FALSE, below).
+**and**, when clusters are compared across several samples, a change replicated in the samples
+(`replicated` TRUE, below).
 
 **Event type and direction.** Each tested gene is classified as `tandem_3UTR` (the tested isoforms
 share their terminal exon: alternative polyadenylation in the same last exon) or
@@ -281,8 +281,8 @@ no preferred direction.
 **Replication across samples.** With `--clusters` spanning several samples, the change of the most
 changing isoform of each gene is measured in each sample (`delta_PU_by_sample`; samples with >= 20 UMIs
 of the gene in both groups: `n_samples`). The change is `replicated` when it has the same sign and at
-least half of `--diu_min_delta` in every evaluable sample (genes evaluable in fewer than 2 samples:
-`replicated` NA). On GSE104556,
+least half of `--diu_min_delta` in every evaluable sample, with at least 2 evaluable samples (otherwise
+`replicated` FALSE: not significant; `NA` only without replicates, e.g. samples compared). On GSE104556,
 some genes switch isoforms in one mouse only (e.g. Cpne1: change of 0.75 in one sample, 0 in the other).
 
 **Warnings.** The pipeline warns (log and `differential/DIU_warnings.txt`) when samples are compared
