@@ -210,14 +210,17 @@ diu.table = FindIsoforms(
 diu.table %>% distinct(comparison, gene_name, event_type, direction) %>% count(comparison, event_type, direction)
 ```
 
-The table has one row per isoform (genes with a differential isoform usage: adjusted p-value < 0.05, usage change >= 0.1, change in the same direction in both mice):
+The table has one row per isoform of the genes with a differential isoform usage (adjusted p-value < 0.05, usage change >= 0.1,
+change in the same direction in both mice), with its counts and usage (`PU`) in each group (`group1`: round spermatids, `group2`: rest).
+The main columns, for the genes replicated in both mice:
 
 ```{r diu_table}
-diu.table %>% filter(comparison == "round spermatids_vs_rest") %>%
-    select(gene_name, transcript_name, event_type, direction, delta_3end, counts.group1, counts.group2, PU.group1, PU.group2,
-           delta_PU, p.value.adjusted, replicated, delta_PU_by_sample) %>%
-    mutate(p.value.adjusted = format(p.value.adjusted, digits = 2)) %>%
-    head(10) %>% knitr::kable(digits = 3)
+#- main columns of the table (all the columns are described in the pipeline output documentation)
+main_cols = c("gene_name", "transcript_name", "counts.group1", "counts.group2", "PU.group1", "PU.group2", "event_type", "direction", "p.value.adjusted")
+diu.table %>% filter(comparison == "round spermatids_vs_rest", replicated == TRUE, counts.group1 + counts.group2 > 0) %>%
+    select(all_of(main_cols)) %>%
+    mutate(counts.group1 = round(counts.group1), counts.group2 = round(counts.group2), p.value.adjusted = format(p.value.adjusted, digits = 2)) %>%
+    head(10) %>% knitr::kable(digits = 2)
 ```
 
 The tandem 3' UTR events (isoforms sharing their terminal exon) give the direction of the 3' UTR changes: shorter 3' UTRs in round and elongating
@@ -239,10 +242,10 @@ For example, the gene **Mdm2** switches from its distal 3' end (Mdm2-201, long 3
 short 3' UTR) in round and elongating spermatids, in both mice:
 
 ```{r mdm2_table}
-diu.table %>% filter(gene_name == "Mdm2", comparison == "round spermatids_vs_rest") %>%
-    select(transcript_name, event_type, direction, delta_3end, counts.group1, counts.group2, PU.group1, PU.group2, delta_PU, dist_3end, p.value.adjusted, replicated, delta_PU_by_sample) %>%
-    mutate(p.value.adjusted = format(p.value.adjusted, digits = 2)) %>%
-    knitr::kable(digits = 3)
+diu.table %>% filter(gene_name == "Mdm2", comparison == "round spermatids_vs_rest", counts.group1 + counts.group2 > 0) %>%
+    select(all_of(main_cols)) %>%
+    mutate(counts.group1 = round(counts.group1), counts.group2 = round(counts.group2), p.value.adjusted = format(p.value.adjusted, digits = 2)) %>%
+    knitr::kable(digits = 2)
 ```
 
 `scalpelR::plotUsage` shows the usage of each isoform in each group of cells (bars: cells of the two mice, points: each mouse):
@@ -346,13 +349,14 @@ patchwork::wrap_plots(p1, p2, ncol = 2, widths = c(1, 1.1))
 ### Global 3' UTR shifts
 
 `scalpelR::plotShiftHeatmap` summarizes the 3' UTR changes of many genes: for each gene, the relative 3' UTR length (usage of its isoforms
-weighted by their 3' UTR length, from 0: shortest to 1: longest isoform) in each group of cells and mouse, scaled per gene
-(blue: shorter, red: longer 3' UTR than the gene mean). Here, the 100 most variable genes with a tandem 3' UTR event, split in 3 clusters:
+weighted by their 3' UTR length, from 0: shortest to 1: longest isoform) in each group of cells, scaled per gene
+(blue: shorter, red: longer 3' UTR than the gene mean; one column per group and sample with `sample_by`). Here, the 100 most variable
+genes with a tandem 3' UTR event, split in 3 clusters:
 
 ```{r shift_heatmap}
-#| fig-width: 8
+#| fig-width: 6
 #| fig-height: 9
-p.shift = plotShiftHeatmap(idge.obj, annotation_gr = gtf, group_by = "celltype", sample_by = "orig.ident",
+p.shift = plotShiftHeatmap(idge.obj, annotation_gr = gtf, group_by = "celltype",
     groups = c("spermatocytes", "round spermatids", "elongating spermatids"), genes = diu.table, n_clusters = 3)
 p.shift
 ```

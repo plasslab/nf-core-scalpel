@@ -238,9 +238,8 @@ FindIsoforms = function(counts, groups, strata = NULL, ends = NULL, test = "chis
     all_results[, test := test]
     all_results[, row := NULL]
     #- one row per isoform: gene-level columns first (repeated), then the isoform columns...
-    first = c("gene_name", "transcript_name", "comparison", "group1", "group2", "event_type", "direction", "delta_3end",
-              "tested", "counts.group1", "counts.group2", "PU.group1", "PU.group2", "delta_PU",
-              "p.value.adjusted", "p.value", "statistic", "max_delta_PU", "replicated", "replication_isoform",
+    first = c("gene_name", "transcript_name", "counts.group1", "counts.group2", "PU.group1", "PU.group2", "delta_PU",
+              "p.value.adjusted", "comparison", "group1", "group2", "event_type", "direction", "delta_3end", "tested", "p.value", "statistic", "max_delta_PU", "replicated", "replication_isoform",
               "n_samples", "n_samples_consistent", "delta_PU_by_sample", "switch", "top_isoform.group1", "top_isoform.group2",
               "umis.group1", "umis.group2", "dist_3end", "end_rank", "strand", "three_end", "te5", "thr.abund", "thr.var",
               "gene.tr", lv, "test", "n_perm", "significant")
