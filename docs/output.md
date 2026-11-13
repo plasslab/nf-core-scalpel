@@ -32,24 +32,27 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
   differences).
 - `differential/DIU_table.csv`: differential isoform usage (tab-separated) between clusters
   (`--clusters`) or samples, **one row per isoform and comparison**; the gene-level columns are
-  repeated on the rows of a gene. Significant genes come first, and the isoforms of a gene are listed
-  from the most proximal to the most distal 3' end.
-  - comparison: `comparison`, `group1`, `group2` (2 groups: group1 vs group2; more than 2 groups: each
-    group vs `rest`);
-  - gene: `significant` (adjusted p-value < 0.05, usage change >= `--diu_min_delta`, change not
-    contradicted between samples), `event_type` (`tandem_3UTR`: tested isoforms share their terminal
-    exon / `alternative_terminal_exon`), `direction` (`shortening` / `lengthening` of the 3' UTRs of
-    group1 vs group2, tandem events) and `delta_3end` (3' UTR length change, nt, tandem events),
-    `max_delta_PU`, `p.value.adjusted` (BH, once per gene), `p.value` (`--diu_test`), `statistic` (X2),
-    dominant isoform per group (`top_isoform.group1/2`) and `switch`, gene UMIs per group
-    (`umis.group1/2`), replication across samples (`replicated`, change of `replication_isoform` in each
-    sample: `delta_PU_by_sample`, `n_samples`, `n_samples_consistent`);
-  - isoform: `transcript_name`, `tested` (in the test), counts (`counts.group1/2`), usage
-    (`PU.group1/2`, fraction of the gene counts) and its change `delta_PU` (group1 - group2), distance
-    to the most proximal 3' end of the gene (`dist_3end`, `end_rank` 1 = most proximal), `strand`,
-    `three_end`, terminal exon start `te5`, filters `thr.abund` (< 5% of the gene in both groups, not
-    tested) and `thr.var` (usage change < `--diu_min_delta`), `gene.tr`, aggregated counts per group
-    (one column per group, as the original table), `test`, `n_perm`.
+  repeated on the rows of a gene. Genes are sorted by adjusted p-value and usage change, and the isoforms
+  of a gene are listed from the most proximal to the most distal 3' end.
+  - `gene_name`, `transcript_name`, comparison (`comparison`, `group1`, `group2`; 2 groups: group1 vs
+    group2, more than 2 groups: each group vs `rest`);
+  - change: `event_type` (`tandem_3UTR`: tested isoforms share their terminal exon /
+    `alternative_terminal_exon`), `direction` (`shortening` / `lengthening` of the 3' UTRs of group1 vs
+    group2, tandem events) and `delta_3end` (3' UTR length change, nt, tandem events);
+  - isoform: `tested` (in the test), counts (`counts.group1/2`), usage (`PU.group1/2`, fraction of the
+    gene counts) and its change `delta_PU` (group1 - group2);
+  - gene statistics: `p.value.adjusted` (BH, once per gene), `p.value` (`--diu_test`), `statistic` (X2),
+    `max_delta_PU` (largest usage change of a tested isoform), replication across samples (`replicated`,
+    change of `replication_isoform` in each sample: `delta_PU_by_sample`, `n_samples`,
+    `n_samples_consistent`), dominant isoform per group (`top_isoform.group1/2`) and `switch`, gene UMIs
+    per group (`umis.group1/2`);
+  - isoform 3' end: distance to the most proximal 3' end of the gene (`dist_3end`, `end_rank` 1 = most
+    proximal), `strand`, `three_end`, terminal exon start `te5`; filters `thr.abund` (< 5% of the gene in
+    both groups, not tested) and `thr.var` (usage change < `--diu_min_delta`); `gene.tr`, aggregated
+    counts per group (one column per group, as the original table), `test`, `n_perm`.
+
+  Genes with a differential isoform usage: `p.value.adjusted < 0.05`, `max_delta_PU >= --diu_min_delta`
+  and `replicated` not FALSE.
 
 </details>
 

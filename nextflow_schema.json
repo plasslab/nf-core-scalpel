@@ -338,7 +338,7 @@
                     "minimum": 0,
                     "maximum": 1,
                     "description": "Minimal change of isoform usage between groups for a significant gene.",
-                    "help_text": "A gene is significant if its adjusted p-value is < 0.05 and the usage (fraction of the gene counts) of at least one tested isoform changes by at least this value between the compared groups (column thr.var: change below it).",
+                    "help_text": "Genes with a differential isoform usage: adjusted p-value < 0.05 and a usage change (fraction of the gene counts) of at least this value for one tested isoform (column max_delta_PU; isoforms with a smaller change: thr.var).",
                     "fa_icon": "fas fa-arrows-alt-h"
                 },
                 "diu_permutations": {

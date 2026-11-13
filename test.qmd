@@ -211,7 +211,8 @@ if(file.exists(diu_file)){
     all(c("comparison", "PU.group1", "PU.group2", "delta_PU", "delta_3end", "p.value.adjusted", "significant") %in% colnames(diu)))
   check("output", "DIU: one adjusted p-value per gene", diu[!is.na(p.value.adjusted), uniqueN(p.value.adjusted), by = .(comparison, gene_name)][, all(V1 == 1)])
   check("output", "DIU table: one row per isoform with event type, direction, dominant isoforms, replication, isoform counts",
-    all(c("event_type", "direction", "top_isoform.group1", "switch", "replicated", "significant", "transcript_name", "tested", "counts.group1", "PU.group1") %in% colnames(diu)) &
+    all(c("event_type", "direction", "top_isoform.group1", "switch", "replicated", "transcript_name", "tested", "counts.group1", "PU.group1") %in% colnames(diu)) &
+    identical(colnames(diu)[1:2], c("gene_name", "transcript_name")) & !("significant" %in% colnames(diu)) &
     diu[, .N, by = .(comparison, gene.tr)][, all(N == 1)])
   qc = fread(file.path(OUTDIR, "differential", "samples_qc.tsv"))
   check("output", "samples_qc.tsv: cells, UMIs per cell and read distance per sample", all(SAMPLES %in% qc$sample) & "median_read_distance" %in% colnames(qc))

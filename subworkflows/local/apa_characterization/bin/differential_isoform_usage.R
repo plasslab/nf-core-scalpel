@@ -147,5 +147,6 @@ if(length(warnings) > 0){
 
 #Writing differential analysis tables (5)
 #***************************************
+if("significant" %in% colnames(my_isoforms)) my_isoforms[, significant := NULL]
 fwrite(my_isoforms, file=args$output, sep="\t", nThread=1)
 saveRDS(seurat.obj, file=args$output_rds)

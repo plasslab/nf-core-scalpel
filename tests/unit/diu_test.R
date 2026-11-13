@@ -101,7 +101,7 @@ checks = data.table(
     "replication: change in the same direction in both samples -> replicated & significant",
     "replication: opposite changes in the 2 samples -> not replicated, not significant (despite p < 0.05)",
     "one row per isoform, gene-level columns identical on the rows of a gene",
-    "isoforms of a gene from proximal to distal 3' end, tested flag, counts summing to the gene UMIs, significant genes first"),
+    "isoforms of a gene from proximal to distal 3' end, tested flag, counts summing to the gene UMIs, sorted by adjusted p-value, gene & isoform first"),
   pass = c(
     fpr(chisq) > 0.3,
     fpr(perm) <= 0.10,
@@ -127,7 +127,7 @@ checks = data.table(
     chisq[, .N, by = .(comparison, gene.tr)][, all(N == 1)] & chisq[, .(n = uniqueN(paste(p.value.adjusted, significant, event_type, replicated))), by = .(comparison, gene_name)][, all(n == 1)],
     identical(chisq[gene_name == "D001"]$transcript_name, c("D001-101", "D001-201")) & all(chisq[gene_name == "D001"]$tested) &
       chisq[gene_name == "D001", isTRUE(all.equal(sum(counts.group1), umis.group1[1]))] &
-      chisq[, !is.unsorted(!significant)]))
+      chisq[!is.na(p.value.adjusted), !is.unsorted(p.value.adjusted)] & identical(colnames(chisq)[1:2], c("gene_name", "transcript_name"))))
 fwrite(checks, file.path(OUT, "checks.tsv"), sep = "\t")
 print(checks)
 quit(status = ifelse(all(checks$pass), 0, 1))

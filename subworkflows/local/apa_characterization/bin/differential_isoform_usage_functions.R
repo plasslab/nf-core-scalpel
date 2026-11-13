@@ -238,15 +238,16 @@ FindIsoforms = function(counts, groups, strata = NULL, ends = NULL, test = "chis
     all_results[, test := test]
     all_results[, row := NULL]
     #- one row per isoform: gene-level columns first (repeated), then the isoform columns...
-    first = c("comparison", "group1", "group2", "gene_name", "significant", "event_type", "direction", "delta_3end",
-              "max_delta_PU", "p.value.adjusted", "p.value", "statistic", "switch", "top_isoform.group1", "top_isoform.group2",
-              "umis.group1", "umis.group2", "replicated", "replication_isoform", "n_samples", "n_samples_consistent", "delta_PU_by_sample",
-              "transcript_name", "tested", "counts.group1", "counts.group2", "PU.group1", "PU.group2", "delta_PU",
-              "dist_3end", "end_rank", "strand", "three_end", "te5", "thr.abund", "thr.var", "gene.tr", lv, "test", "n_perm")
+    first = c("gene_name", "transcript_name", "comparison", "group1", "group2", "event_type", "direction", "delta_3end",
+              "tested", "counts.group1", "counts.group2", "PU.group1", "PU.group2", "delta_PU",
+              "p.value.adjusted", "p.value", "statistic", "max_delta_PU", "replicated", "replication_isoform",
+              "n_samples", "n_samples_consistent", "delta_PU_by_sample", "switch", "top_isoform.group1", "top_isoform.group2",
+              "umis.group1", "umis.group2", "dist_3end", "end_rank", "strand", "three_end", "te5", "thr.abund", "thr.var",
+              "gene.tr", lv, "test", "n_perm", "significant")
     setcolorder(all_results, intersect(first, colnames(all_results)))
-    #- significant genes first, isoforms of a gene from the most proximal to the most distal 3' end...
-    all_results[, `:=`(o_sig = !significant, o_p = p.value.adjusted, o_d = -max_delta_PU)]
-    setorder(all_results, comparison, o_sig, o_p, o_d, gene_name, dist_3end, transcript_name, na.last = TRUE)
-    all_results[, c("o_sig", "o_p", "o_d") := NULL]
+    #- genes by adjusted p-value & usage change, isoforms of a gene from the most proximal to the most distal 3' end...
+    all_results[, o_d := -max_delta_PU]
+    setorder(all_results, comparison, p.value.adjusted, o_d, gene_name, dist_3end, transcript_name, na.last = TRUE)
+    all_results[, o_d := NULL]
     return(all_results)
 }
