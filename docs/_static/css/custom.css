@@ -1,0 +1,21 @@
+/* SCALPEL accent (nf-core green), layout close to the scverse documentation */
+html[data-theme="light"] {
+    --pst-color-primary: #1a8a55;
+    --pst-color-secondary: #24b064;
+    --pst-color-link: #1a8a55;
+    --pst-color-link-hover: #24b064;
+}
+html[data-theme="dark"] {
+    --pst-color-primary: #4fd08b;
+    --pst-color-secondary: #24b064;
+    --pst-color-link: #4fd08b;
+    --pst-color-link-hover: #8fe3b5;
+}
+.navbar-brand img { height: 3rem; }
+.bd-content img { max-width: 100%; height: auto; }
+.bd-article table { font-size: 0.85rem; }
+.sd-card-title { font-weight: 600; }
+/* scalpelR reference pages (help files): code blocks and argument tables kept within the page */
+.bd-article pre { overflow-x: auto; white-space: pre; }
+.bd-article table { display: block; overflow-x: auto; }
+.bd-article td code { white-space: nowrap; }

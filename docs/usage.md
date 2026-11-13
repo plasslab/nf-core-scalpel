@@ -181,14 +181,6 @@ in bins of `--binsize` nt. When it is learned from fewer than 100 reads (very sm
 datasets), the pipeline warns (log and `probability/<sample>.warning.txt`): many distances are
 then never observed and get a null probability, and the EM relies on the isoform TPM fractions.
 
-## Read distance distribution
-
-The probability of a read given its distance to the isoform 3' end is learned per sample from
-the genes with a single selected isoform (excluding the top `--gene_fraction` expressed genes),
-in bins of `--binsize` nt. When it is learned from fewer than 100 reads (very small / test
-datasets), the pipeline warns (log and `probability/<sample>.warning.txt`): many distances are
-then never observed and get a null probability, and the EM relies on the isoform TPM fractions.
-
 ## Isoform quantification (EM)
 
 For each cell and gene, the isoform abundances are estimated by an EM algorithm from the

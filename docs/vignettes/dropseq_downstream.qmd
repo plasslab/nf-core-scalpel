@@ -45,10 +45,6 @@ theme_umap = function(ggobj) {
 }
 ```
 
-::: {.callout-note}
-**Note**: Install scalpelR for downstream analysis
-:::
-
 The functions used in this downstream analysis are provided by the R package scalpelR, installed from its [Github page](https://github.com/Franzx7/scalpelR):
 
 ```{r scalpelR_install, eval=F}

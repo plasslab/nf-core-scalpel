@@ -1,0 +1,5 @@
+sphinx>=7
+pydata-sphinx-theme>=0.15
+myst-parser>=3
+sphinx-copybutton
+sphinx-design
