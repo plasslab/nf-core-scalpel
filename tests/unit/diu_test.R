@@ -37,6 +37,8 @@ groups = rep(c("A", "B"), c(N1, N2))
 #- 3' ends: isoform -101 proximal, -201 distal (+ strand)...
 ends = data.table(gene_name = sub("\\*\\*\\*.*", "", rownames(counts)), transcript_name = sub(".*\\*\\*\\*", "", rownames(counts)), strand = "+")
 ends[, three_end := 1000 + 500 * (as.integer(substr(transcript_name, nchar(transcript_name) - 2, nchar(transcript_name) - 2)) - 1)]
+#- terminal exon start: shared by the isoforms of the D genes (tandem 3' UTRs), distinct for the other genes...
+ends[, te5 := ifelse(grepl("^D", gene_name), 900, three_end - 100)]
 
 chisq = FindIsoforms(counts, groups, ends = ends, test = "chisq", cores = 2)
 perm = FindIsoforms(counts, groups, ends = ends, test = "permutation", n_perm = 2000, cores = 3)
@@ -59,6 +61,14 @@ fpr_b = function(res) res[, .(p = p.value[1]), by = gene_name][, mean(p < 0.05, 
 
 #- only single-isoform genes (e.g. few selected cells): no test, explicit message...
 single = FindIsoforms(counts[c(1, 4), ], groups, test = "chisq")
+
+#- replication: clusters A/B in 2 samples; gene RC changes the same way in both, gene RO in opposite directions...
+cmp2 = function(g, a1, b1, a2, b2) cbind(sim_gene(g, a1, b1, 200, 200, conc = 50, depth = 20), sim_gene(g, a2, b2, 200, 200, conc = 50, depth = 20))
+rep_counts = rbind(cmp2("RC", c(0.7, 0.3), c(0.3, 0.7), c(0.7, 0.3), c(0.3, 0.7)), cmp2("RO", c(0.9, 0.1), c(0.1, 0.9), c(0.35, 0.65), c(0.65, 0.35)))
+colnames(rep_counts) = paste0("cell", seq_len(ncol(rep_counts)))
+rep_res = FindIsoforms(rep_counts, rep(rep(c("A", "B"), each = 200), 2), strata = rep(c("S1", "S2"), each = 400), test = "chisq")
+rep_genes = Summarize_genes(rep_res)
+genes_chisq = Summarize_genes(chisq)
 
 #- > 2 groups: each group vs the rest...
 multi = FindIsoforms(counts[, 1:600], rep(c("A", "B", "C"), 200), test = "chisq", cores = 2)
@@ -83,7 +93,13 @@ checks = data.table(
     sprintf("permutation not stratified: batch confounded with clusters called (%.2f)", fpr_b(perm_nostrat)),
     "> 2 groups: one comparison per group vs the rest (A_vs_rest, B_vs_rest, C_vs_rest)",
     "per-group count columns kept (A, B) as in the original DIU table",
-    "no gene with at least 2 isoforms: explicit message instead of an error"),
+    "no gene with at least 2 isoforms: explicit message instead of an error",
+    "event type: tandem 3' UTR (shared terminal exon) vs alternative terminal exon",
+    "direction for tandem events only (D genes: group A uses the proximal 3' end more -> shortening)",
+    "dominant isoform of each group and isoform switch (D001: -101 in A, -201 in B)",
+    "replication: change in the same direction in both samples -> replicated & significant",
+    "replication: opposite changes in the 2 samples -> not replicated, not significant (despite p < 0.05)",
+    "gene table: one row per gene and comparison"),
   pass = c(
     fpr(chisq) > 0.3,
     fpr(perm) <= 0.10,
@@ -100,7 +116,13 @@ checks = data.table(
     fpr_b(perm_nostrat) > 0.5,
     setequal(unique(multi$comparison), c("A_vs_rest", "B_vs_rest", "C_vs_rest")),
     all(c("A", "B") %in% colnames(chisq)),
-    identical(colnames(single), "output")))
+    identical(colnames(single), "output"),
+    all(genes_chisq[grepl("^D", gene_name)]$event_type == "tandem_3UTR") & all(genes_chisq[grepl("^N", gene_name)]$event_type == "alternative_terminal_exon", na.rm = TRUE),
+    all(genes_chisq[grepl("^D", gene_name) & significant == TRUE]$direction == "shortening") & all(is.na(genes_chisq[grepl("^N", gene_name)]$delta_3end)),
+    genes_chisq[gene_name == "D001", top_isoform.group1 == "D001-101" & top_isoform.group2 == "D001-201" & switch],
+    rep_genes[gene_name == "RC", isTRUE(replicated) & significant & n_samples == 2],
+    rep_genes[gene_name == "RO", p.value < 0.05 & isFALSE(replicated) & !significant],
+    genes_chisq[, .N, by = .(comparison, gene_name)][, all(N == 1)]))
 fwrite(checks, file.path(OUT, "checks.tsv"), sep = "\t")
 print(checks)
 quit(status = ifelse(all(checks$pass), 0, 1))

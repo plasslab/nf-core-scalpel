@@ -263,8 +263,34 @@ On GSE104556 (2 samples, ~11,700 cells, 7,000 genes tested), the differential is
 takes ~1.5 min with `--diu_test permutation` (6 CPUs).
 
 For both tests, the p-values are adjusted (BH) once per gene and comparison, and a gene is
-`significant` when its adjusted p-value is < 0.05 **and** the usage of at least one tested isoform
-changes by at least `--diu_min_delta` (default 0.1; isoforms with a smaller change: `thr.var`).
+`significant` when its adjusted p-value is < 0.05, the usage of at least one tested isoform
+changes by at least `--diu_min_delta` (default 0.1; isoforms with a smaller change: `thr.var`)
+**and**, when clusters are compared across several samples, the change is replicated (below).
+
+**Event type and direction.** Each tested gene is classified as `tandem_3UTR` (the tested isoforms
+share their terminal exon: alternative polyadenylation in the same last exon) or
+`alternative_terminal_exon`. For tandem events, `delta_3end` is the change of the weighted 3' UTR
+length of group1 vs group2 (nt) and `direction` is `shortening` (group1 uses shorter 3' UTRs) or
+`lengthening`. For alternative terminal exons the genomic distance between the 3' ends is not a 3' UTR
+length: no direction is given, `switch` tells whether the dominant isoform differs between the groups
+(`top_isoform.group1/2`). On GSE104556, tandem 3' UTRs are shorter in round spermatids than in
+spermatocytes for 78% of the significant genes, as expected; alternative terminal exon changes show
+no preferred direction.
+
+**Replication across samples.** With `--clusters` spanning several samples, the change of the most
+changing isoform of each gene is measured in each sample (`delta_PU_by_sample`; samples with >= 20 UMIs
+of the gene in both groups: `n_samples`). The change is `replicated` when it has the same sign and at
+least half of `--diu_min_delta` in every evaluable sample; genes with a non-replicated change are not
+`significant` (genes evaluable in fewer than 2 samples: `replicated` NA, not filtered). On GSE104556,
+some genes switch isoforms in one mouse only (e.g. Cpne1: change of 0.75 in one sample, 0 in the other).
+
+**Warnings.** The pipeline warns (log and `differential/DIU_warnings.txt`) when samples are compared
+without `--clusters` (differences between samples can be biological, individual or technical and
+cannot be separated without replicates), and when the libraries differ: `differential/samples_qc.tsv`
+reports the cells, UMIs per cell and median read distance to the 3' ends of each sample (warning above
+10 nt of difference). On GSE104556 (142 vs 128 nt), tandem 3' UTR changes between the two samples show
+no preferred direction while alternative terminal exon changes do (66-75%), so changes between samples
+are best interpreted for tandem events.
 
 ```bash
 nextflow run nf-core/scalpel ... --clusters clusters.tsv --diu_test permutation

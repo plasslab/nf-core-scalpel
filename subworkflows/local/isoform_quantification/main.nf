@@ -77,6 +77,7 @@ workflow ISOFORM_QUANTIFICATION {
 
     emit:
     idge = DGE_GENERATION.out.dge_matrices    // channel: [ val(meta), path(iDGE dir) ]
+    probabilities = PROBABILITY_DISTRIBUTION.out.probabilities // channel: [ val(meta), path(prob), path(pdf) ]
     versions = ch_versions                     // channel: [ versions.yml ]
 
 }

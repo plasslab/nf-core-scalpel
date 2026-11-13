@@ -27,14 +27,23 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 - `filtered_bams/<sample>_filtered.bam(.bai)`: reads kept by SCALPEL after all filtering steps
   (e.g. coverage visualization of the quantified isoforms).
 - `pipeline_info/nf_core_scalpel_software_versions.yml`: versions of all tools & R packages used.
+- `differential/DIU_genes.csv`: differential isoform usage, one row per gene and comparison
+  (tab-separated): `event_type` (`tandem_3UTR` / `alternative_terminal_exon`), `direction`
+  (`shortening` / `lengthening` of group1 vs group2, tandem events), `delta_3end` (3' UTR length change,
+  nt), dominant isoform per group and `switch`, UMIs per group, `max_delta_PU`, `statistic`, `p.value`,
+  `p.value.adjusted`, replication across samples (`n_samples`, `n_samples_consistent`,
+  `delta_PU_by_sample`, `replicated`) and `significant`, sorted by significance.
+- `differential/samples_qc.tsv`: cells, median UMIs per cell and median read distance to the 3' ends
+  per sample; `differential/DIU_warnings.txt`: warnings (samples compared without clusters, library
+  differences).
 - `differential/DIU_table.csv`: differential isoform usage (tab-separated) between clusters
   (`--clusters`) or samples, one row per isoform and comparison (`comparison`, `group1`, `group2`;
   more than 2 groups: each group vs `rest`):
   - aggregated counts per group (one column per group), `counts.group1/2`, isoform usage
     `PU.group1/2` and its change `delta_PU` (group1 - group2);
-  - isoform 3' end (`strand`, `three_end`), distance to the most proximal 3' end of the gene
-    (`dist_3end`, `end_rank` 1 = most proximal) and gene 3' end shift `delta_3end` (nt; > 0: group1
-    uses more distal 3' ends, i.e. longer 3' UTRs);
+  - isoform 3' end (`strand`, `three_end`), terminal exon start (`te5`), distance to the most proximal
+    3' end of the gene (`dist_3end`, `end_rank` 1 = most proximal), and the gene-level columns of
+    `DIU_genes.csv`;
   - filters `thr.abund` (< 5% of the gene in both groups, not tested) and `thr.var` (usage change
     < `--diu_min_delta`), gene `statistic` (X2), `p.value` (`--diu_test`), `p.value.adjusted` (BH
     per gene), `max_delta_PU`, `significant`, `test` and `n_perm` (permutations run).

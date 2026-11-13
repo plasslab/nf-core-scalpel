@@ -19,6 +19,10 @@ parser$add_argument('--test', type="character", default="chisq", help='DIU test:
 parser$add_argument('--min_delta', type="double", default=0.1, help='minimal change of isoform usage between groups (default: 0.1)')
 parser$add_argument('--permutations', type="integer", default=10000, help='maximal number of cell permutations (test permutation, default: 10000)')
 parser$add_argument('--cpus', type="integer", default=1, help='number of cores')
+parser$add_argument('--probabilities', type="character", default="NULL", help='path of directory containing the <sample>.prob read distance distributions or NULL')
+parser$add_argument('--output_genes', type="character", default="DIU_genes.csv", help='path of output gene-level DIU table')
+parser$add_argument('--output_qc', type="character", default="samples_qc.tsv", help='path of output samples QC table')
+parser$add_argument('--output_warnings', type="character", default="DIU_warnings.txt", help='path of output warnings')
 args = parser$parse_args()
 
 
@@ -112,7 +116,38 @@ if(n_distinct(seurat.obj$Clusters) == 1){
 		cores = args$cpus)
 }
 
-#Writing differential analysis table (4)
-#***********************************
+#Samples QC & warnings (4)
+#************************
+warnings = character(0)
+#- samples compared without clusters: no replicates...
+if(args$clusters == "NULL"){
+	warnings = c(warnings, "DIU: samples are compared to each other (no --clusters): differences between samples can be biological, individual or technical (batch) and cannot be separated without replicates. Compare cell clusters across samples (--clusters) to assess the replication of the changes in each sample.")
+}
+#- library QC: cells, UMIs per cell & read distance to the 3' ends per sample...
+counts_all = SeuratObject::LayerData(JoinLayers(seurat.obj), layer = "counts")
+qc = data.table(sample = seurat.obj$orig.ident, umis = Matrix::colSums(counts_all))[, .(cells = .N, median_umis_per_cell = median(umis)), by = sample]
+prob_files = if(args$probabilities == "NULL") character(0) else list.files(args$probabilities, pattern = "\\.prob$", full.names = T)
+if(length(prob_files) > 0){
+	reads_dist = rbindlist(lapply(prob_files, function(f){
+		p = fread(f, header = FALSE, col.names = c("distance", "reads", "probability"))
+		p = p[order(distance)]
+		data.table(sample = sub("\\.prob$", "", basename(f)), median_read_distance = p$distance[which(cumsum(p$reads) >= sum(p$reads) / 2)[1]])
+	}))
+	qc = merge(qc, reads_dist, by = "sample", all.x = TRUE)
+	spread = diff(range(qc$median_read_distance, na.rm = TRUE))
+	if(is.finite(spread) & spread > 10){
+		warnings = c(warnings, paste0("DIU: the median read distance to the 3' ends differs by ", spread, " nt between samples (",
+			paste0(qc$sample, ": ", qc$median_read_distance, " nt", collapse = ", "), "). Changes between alternative terminal exons compared between samples can be biased by library differences; tandem 3' UTR changes (event_type tandem_3UTR) are less sensitive."))
+	}
+}
+fwrite(qc, file = args$output_qc, sep = "\t")
+if(length(warnings) > 0){
+	writeLines(warnings, args$output_warnings)
+	message(paste(warnings, collapse = "\n"))
+}
+
+#Writing differential analysis tables (5)
+#***************************************
 fwrite(my_isoforms, file=args$output, sep="\t", nThread=1)
+fwrite(Summarize_genes(my_isoforms), file=args$output_genes, sep="\t", nThread=1)
 saveRDS(seurat.obj, file=args$output_rds)

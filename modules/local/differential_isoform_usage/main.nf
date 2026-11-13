@@ -11,6 +11,7 @@ process DIFFERENTIAL_ISOFORM_USAGE {
         path(idge_dirs, stageAs: "idge/*")
         path(clusters)
         path(annotations, stageAs: "annots/*")
+        path(probabilities, stageAs: "probs/*")
         val(diu_test)
         val(min_delta)
         val(permutations)
@@ -19,6 +20,9 @@ process DIFFERENTIAL_ISOFORM_USAGE {
 
     output:
         path("DIU_table.csv"), emit: diu_table
+        path("DIU_genes.csv"), emit: diu_genes
+        path("samples_qc.tsv"), emit: samples_qc
+        path("DIU_warnings.txt"), emit: warnings, optional: true
         path("iDGE_seurat.RDS"), emit: seurat_obj
         path('versions.yml'), emit: versions
 
@@ -34,6 +38,10 @@ process DIFFERENTIAL_ISOFORM_USAGE {
         --output DIU_table.csv \
         --output_rds iDGE_seurat.RDS \
         --annotations annots \
+        --probabilities probs \
+        --output_genes DIU_genes.csv \
+        --output_qc samples_qc.tsv \
+        --output_warnings DIU_warnings.txt \
         --test ${diu_test} \
         --min_delta ${min_delta} \
         --permutations ${permutations} \
@@ -45,7 +53,7 @@ process DIFFERENTIAL_ISOFORM_USAGE {
     """
     stub:
     """
-    touch DIU_table.csv
+    touch DIU_table.csv DIU_genes.csv samples_qc.tsv
     touch iDGE_seurat.RDS
     echo "R: stub" > versions.yml
     """

@@ -15,6 +15,7 @@ workflow APA_CHARACTERIZATION {
     ch_filtered_reads // channel: [ val(meta), val(seqname), path(ip_filtered.fst) ] from READS_PROCESSING
     ch_chr_bams // channel: [ val(seqname), val(meta), path(chr.bam) ] from READS_PROCESSING
     ch_annots // channel: [ val(seqname), path(annots.gz) ] selected isoforms (3' ends)
+    ch_probabilities // channel: [ val(meta), path(prob), path(pdf) ] read distance distributions (library QC)
 
     main:
     ch_versions = channel.empty()
@@ -27,6 +28,7 @@ workflow APA_CHARACTERIZATION {
         ch_idge.map{ it = it[1] }.collect(),
         clusters_file,
         ch_annots.map{ it = it[1] }.collect(),
+        ch_probabilities.map{ it = it[1] }.collect(),
         params.diu_test,
         params.diu_min_delta,
         params.diu_permutations,
@@ -34,6 +36,8 @@ workflow APA_CHARACTERIZATION {
         file("${projectDir}/subworkflows/local/apa_characterization/bin/differential_isoform_usage_functions.R")
     )
     ch_versions = ch_versions.mix(DIFFERENTIAL_ISOFORM_USAGE.out.versions)
+    // Warn on sample comparisons without replicates / library differences
+    DIFFERENTIAL_ISOFORM_USAGE.out.warnings.subscribe{ it.readLines().each{ line -> log.warn(line) } }
 
     // BAM file of the reads kept by SCALPEL for each sample (e.g. coverage visualization)
     ch_chr_bams.map{
@@ -46,6 +50,7 @@ workflow APA_CHARACTERIZATION {
 
     emit:
     diu_table = DIFFERENTIAL_ISOFORM_USAGE.out.diu_table   // path: DIU_table.csv
+    diu_genes = DIFFERENTIAL_ISOFORM_USAGE.out.diu_genes   // path: DIU_genes.csv
     seurat_obj = DIFFERENTIAL_ISOFORM_USAGE.out.seurat_obj // path: iDGE_seurat.RDS
     filtered_bams = FILTERED_BAMS.out.filtered_bams        // channel: [ val(meta), bam, bai ]
     versions = ch_versions                                 // channel: [ versions.yml ]

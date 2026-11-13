@@ -210,6 +210,13 @@ if(file.exists(diu_file)){
   check("output", "DIU table reports usage change, 3' end shift and significance",
     all(c("comparison", "PU.group1", "PU.group2", "delta_PU", "delta_3end", "p.value.adjusted", "significant") %in% colnames(diu)))
   check("output", "DIU: one adjusted p-value per gene", diu[!is.na(p.value.adjusted), uniqueN(p.value.adjusted), by = .(comparison, gene_name)][, all(V1 == 1)])
+  genes = fread(file.path(OUTDIR, "differential", "DIU_genes.csv"))
+  check("output", "DIU_genes.csv: one row per gene with event type, direction, dominant isoforms, replication",
+    all(c("event_type", "direction", "top_isoform.group1", "switch", "replicated", "significant") %in% colnames(genes)) & genes[, .N, by = .(comparison, gene_name)][, all(N == 1)])
+  qc = fread(file.path(OUTDIR, "differential", "samples_qc.tsv"))
+  check("output", "samples_qc.tsv: cells, UMIs per cell and read distance per sample", all(SAMPLES %in% qc$sample) & "median_read_distance" %in% colnames(qc))
+  check("output", "warning written for samples compared without --clusters",
+    file.exists(file.path(OUTDIR, "differential", "DIU_warnings.txt")) && any(grepl("no --clusters", readLines(file.path(OUTDIR, "differential", "DIU_warnings.txt")))))
   knitr::kable(head(diu[order(p.value.adjusted)], 6), digits = 4)
 }
 
@@ -728,7 +735,9 @@ check("#21", "no FASTQ without --isoform_annotation -> explicit error", res$stat
 ```{r scenario-ip-reference}
 #| eval: !expr params$scenarios
 #- default: internal priming reference generated from --genome (baseline run)...
-check("ip_ref", "baseline run: internal priming reference generated from --genome", any(grepl("IP_REFERENCE_GENERATION", readLines(PIPELINE_LOG))))
+#- (the log lists the submitted tasks only: with -resume the task can be cached, its output is still published)...
+check("ip_ref", "baseline run: internal priming reference generated from --genome",
+  file.exists(file.path(OUTDIR, "ip_reference", "ip_reference.track.gz")) & !any(grepl("--ip_reference", readLines(PIPELINE_LOG), fixed = TRUE)))
 gen_file = file.path(OUTDIR, "ip_reference", "ip_reference.track.gz")
 check("ip_ref", "generated reference published (ip_reference/ip_reference.track.gz)", file.exists(gen_file))
 ref_file = normalizePath("tests/data/light/annotations/polya.track.gz")

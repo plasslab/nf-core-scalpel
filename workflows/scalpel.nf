@@ -54,7 +54,8 @@ workflow SCALPEL {
         ISOFORM_QUANTIFICATION.out.idge,
         READS_PROCESSING.out.reads,
         READS_PROCESSING.out.chr_bams,
-        ch_all_transcripts
+        ch_all_transcripts,
+        ISOFORM_QUANTIFICATION.out.probabilities
     )
     ch_versions = ch_versions.mix(APA_CHARACTERIZATION.out.versions)
 
