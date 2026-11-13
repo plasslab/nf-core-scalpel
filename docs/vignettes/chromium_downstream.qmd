@@ -309,16 +309,30 @@ utr3length_tab = weightedUTR_cell(
 head(utr3length_tab, 5)
 ```
 
+The 3' UTR length of each cell (points) per cell type, and along the differentiation on the UMAP:
+
 ```{r 3utr_plots}
-#| fig-width: 7
-#| fig-height: 5
-utr3length_tab %>%
-    ggplot(aes(x = group, y = wUTRlength.cell, fill = group)) +
-    geom_violin(scale = "width", trim = T, alpha = .6) +
-    geom_boxplot(fill = "white", width = .15, outlier.shape = NA) +
+#| fig-width: 11
+#| fig-height: 4.5
+lv = c("spermatocytes", "round spermatids", "elongating spermatids")
+cols = setNames(grDevices::hcl.colors(3, "Dark 3"), lv)
+med = utr3length_tab %>% group_by(group) %>% summarise(m = median(wUTRlength.cell))
+#- per cell type: cells (jitter) & distribution (boxplot)...
+p1 = utr3length_tab %>%
+    ggplot(aes(x = group, y = wUTRlength.cell)) +
+    geom_jitter(aes(color = group), width = .25, size = .6, alpha = .5) +
+    geom_boxplot(fill = NA, width = .35, outlier.shape = NA, linewidth = .6) +
+    geom_text(data = med, aes(x = group, y = max(utr3length_tab$wUTRlength.cell) * 1.04, label = paste0(round(m), " nt")), size = 4) +
+    scale_color_manual(values = cols) + scale_x_discrete(labels = function(x) sub(" ", "\n", x)) +
     xlab(NULL) + ylab("weighted 3' UTR length (nt)") +
     ggtitle("Average 3' UTR length per cell") +
-    theme_bw(base_size = 13) + theme(legend.position = "none")
+    theme_bw(base_size = 13) + theme(legend.position = "none", panel.grid.major.x = element_blank())
+#- on the UMAP...
+idge.obj$wUTRlength = utr3length_tab$wUTRlength.cell[match(colnames(idge.obj), utr3length_tab$cells)]
+p2 = FeaturePlot(idge.obj, features = "wUTRlength", pt.size = .5, order = F, max.cutoff = "q99", min.cutoff = "q1") %>% theme_umap() +
+    scale_color_viridis_c(option = "B", name = "3' UTR\nlength (nt)") + ggtitle("3' UTR length along the differentiation") +
+    theme(plot.title = element_text(face = "plain", hjust = 0, size = 15))
+patchwork::wrap_plots(p1, p2, ncol = 2, widths = c(1, 1.1))
 ```
 
 ## Further downstream analysis
