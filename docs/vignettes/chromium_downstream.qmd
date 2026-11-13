@@ -303,8 +303,11 @@ subsetBAM(bam_file = bams[["SRR6129050"]], barcodes = rs_barcodes, output_file =
 
 ### 3' UTR length in single cells
 
-Using the isoform quantification and the genome annotation (3' UTR of each transcript), `scalpelR::weightedUTR_cell` computes for each cell the
-mean over its genes of the weighted 3' UTR length (isoform usage x isoform 3' UTR length):
+Using the isoform quantification and the genome annotation (3' UTR of each transcript), `scalpelR::weightedUTR_cell` computes for each gene
+and cell the weighted 3' UTR length (isoform usage x isoform 3' UTR length), for the genes whose isoforms differ in 3' UTR length. Each gene
+is compared with its weighted 3' UTR length in all the cells, and the differences are averaged over the genes of the cell (nt; > 0: longer,
+< 0: shorter 3' UTRs than the average cell). As each gene is compared with itself, the value does not depend on which genes are detected
+in the cell (sequencing depth):
 
 ```{r 3utr_length}
 utr3length_tab = weightedUTR_cell(
@@ -323,28 +326,34 @@ The 3' UTR length of each cell (points) per cell type, and along the differentia
 lv = c("spermatocytes", "round spermatids", "elongating spermatids")
 cols = setNames(grDevices::hcl.colors(3, "Dark 3"), lv)
 med = utr3length_tab %>% group_by(group) %>% summarise(m = median(wUTRlength.cell))
+#- y range: 99% of the cells...
+yl = quantile(utr3length_tab$wUTRlength.cell, c(.005, .995), na.rm = T)
 #- per cell type: cells (jitter) & distribution (boxplot)...
 p1 = utr3length_tab %>%
     ggplot(aes(x = group, y = wUTRlength.cell)) +
     geom_jitter(aes(color = group), width = .25, size = .6, alpha = .5) +
     geom_boxplot(fill = NA, width = .35, outlier.shape = NA, linewidth = .6) +
-    geom_text(data = med, aes(x = group, y = max(utr3length_tab$wUTRlength.cell) * 1.04, label = paste0(round(m), " nt")), size = 4) +
+    geom_text(data = med, aes(x = group, y = yl[2] + diff(yl) * .08, label = sprintf("%+.0f nt", m)), size = 4) +
     scale_color_manual(values = cols) + scale_x_discrete(labels = function(x) sub(" ", "\n", x)) +
-    xlab(NULL) + ylab("weighted 3' UTR length (nt)") +
-    ggtitle("Average 3' UTR length per cell") +
+    geom_hline(yintercept = 0, linetype = 2, color = "gray40") +
+    coord_cartesian(ylim = c(yl[1], yl[2] + diff(yl) * .12)) +
+    xlab(NULL) + ylab("3' UTR length vs average cell (nt)") +
+    ggtitle("3' UTR length per cell") +
     theme_bw(base_size = 13) + theme(legend.position = "none", panel.grid.major.x = element_blank())
-#- on the UMAP...
+#- on the UMAP (blue: shorter, red: longer 3' UTRs than the average cell)...
 idge.obj$wUTRlength = utr3length_tab$wUTRlength.cell[match(colnames(idge.obj), utr3length_tab$cells)]
-#- colors spread over the quantiles of the cells (gradient visible within each cell type)...
-q = quantile(idge.obj$wUTRlength, seq(.01, .99, length.out = 11), na.rm = T)
+lim = quantile(abs(idge.obj$wUTRlength), .98, na.rm = T)
 p2 = FeaturePlot(idge.obj, features = "wUTRlength", pt.size = .6, order = F) %>% theme_umap() +
-    scale_color_gradientn(colors = rev(RColorBrewer::brewer.pal(11, "RdBu")), values = scales::rescale(q), limits = range(q),
-                          oob = scales::squish, breaks = c(250, 300, 350, 400, 500, 600), name = "3' UTR\nlength (nt)") +
+    scale_color_gradientn(colors = rev(RColorBrewer::brewer.pal(11, "RdBu")), limits = c(-lim, lim), oob = scales::squish,
+                          name = "3' UTR length\nvs average\ncell (nt)") +
     guides(color = guide_colorbar(barheight = unit(5, "cm"))) +
     ggtitle("3' UTR length along the differentiation") +
     theme(plot.title = element_text(face = "plain", hjust = 0, size = 15))
 patchwork::wrap_plots(p1, p2, ncol = 2, widths = c(1, 1.1))
 ```
+
+The 3' UTRs shorten progressively along the spermatogenesis: longer than the average cell in spermatocytes, shorter in round and even
+shorter in elongating spermatids, also visible within each cell type on the UMAP.
 
 ### Global 3' UTR shifts
 
