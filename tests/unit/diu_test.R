@@ -14,10 +14,10 @@ set.seed(42)
 # Simulated cells: isoform usage varies from cell to cell (Dirichlet), UMIs per cell ~ Poisson
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 rdirichlet1 = function(a){ x = rgamma(length(a), a); x / sum(x) }
-sim_gene = function(gene, p1, p2, n1, n2, conc = 2, depth = 15){
+sim_gene = function(gene, p1, p2, n1, n2, conc = 2, depth = 15, depth2 = depth){
     n = n1 + n2
     pr = rbind(t(replicate(n1, rdirichlet1(conc * p1))), t(replicate(n2, rdirichlet1(conc * p2))))
-    umis = rpois(n, depth)
+    umis = c(rpois(n1, depth), rpois(n2, depth2))
     m = t(sapply(seq_len(n), function(i) rmultinom(1, umis[i], pr[i, ])))
     rownames_ = paste0(gene, "***", gene, "-", seq_along(p1), "01")
     return(Matrix(t(m), sparse = TRUE, dimnames = list(rownames_, NULL)))
@@ -25,10 +25,12 @@ sim_gene = function(gene, p1, p2, n1, n2, conc = 2, depth = 15){
 N1 = 300
 N2 = 300
 null_genes = lapply(sprintf("N%03d", 1:150), function(g) sim_gene(g, c(0.5, 0.3, 0.2), c(0.5, 0.3, 0.2), N1, N2))
+#- expression change only (4x more UMIs in group A), same isoform usage...
+de_genes = lapply(sprintf("E%03d", 1:60), function(g) sim_gene(g, c(0.5, 0.3, 0.2), c(0.5, 0.3, 0.2), N1, N2, depth = 30, depth2 = 7))
 diff_genes = lapply(sprintf("D%03d", 1:30), function(g) sim_gene(g, c(0.7, 0.3), c(0.4, 0.6), N1, N2))
 #- tiny change (0.02) with a large number of UMIs: X2 significant, below --diu_min_delta...
 tiny_gene = sim_gene("TINY", c(0.51, 0.49), c(0.49, 0.51), N1, N2, conc = 1000, depth = 500)
-counts = do.call(rbind, c(null_genes, diff_genes, list(tiny_gene)))
+counts = do.call(rbind, c(null_genes, de_genes, diff_genes, list(tiny_gene)))
 colnames(counts) = paste0("cell", seq_len(ncol(counts)))
 groups = rep(c("A", "B"), c(N1, N2))
 
@@ -37,8 +39,9 @@ ends = data.table(gene_name = sub("\\*\\*\\*.*", "", rownames(counts)), transcri
 ends[, three_end := 1000 + 500 * (as.integer(substr(transcript_name, nchar(transcript_name) - 2, nchar(transcript_name) - 2)) - 1)]
 
 chisq = FindIsoforms(counts, groups, ends = ends, test = "chisq", cores = 2)
-perm = FindIsoforms(counts, groups, ends = ends, test = "permutation", n_perm = 2000, cores = 2)
-fpr = function(res) res[grepl("^N", gene_name), .(p = p.value[1]), by = gene_name][, mean(p < 0.05, na.rm = TRUE)]
+perm = FindIsoforms(counts, groups, ends = ends, test = "permutation", n_perm = 2000, cores = 3)
+perm1 = FindIsoforms(counts, groups, ends = ends, test = "permutation", n_perm = 2000, cores = 1)
+fpr = function(res, prefix = "^N") res[grepl(prefix, gene_name), .(p = p.value[1]), by = gene_name][, mean(p < 0.05, na.rm = TRUE)]
 power = function(res) res[grepl("^D", gene_name), .(s = significant[1]), by = gene_name][, mean(s)]
 
 
@@ -70,6 +73,8 @@ checks = data.table(
     sprintf("chisq: false positive rate on overdispersed null genes is inflated (%.2f)", fpr(chisq)),
     sprintf("permutation: false positive rate on null genes is calibrated (%.2f <= 0.10)", fpr(perm)),
     sprintf("permutation: true usage changes detected (power %.2f >= 0.9)", power(perm)),
+    sprintf("permutation: expression change without usage change not called (%.2f <= 0.10)", fpr(perm, "^E")),
+    sprintf("permutation: same p-values with 1 or 3 cores"),
     "BH adjustment once per gene (one adjusted p-value per gene, = p.adjust of the gene p-values)",
     "delta_PU = PU.group1 - PU.group2 and usage sums to 1 per gene and group",
     sprintf("delta_3end < 0 when group 1 uses the proximal 3' end more (D001: %.0f nt, expected -150)", d1$delta_3end[1]),
@@ -83,6 +88,8 @@ checks = data.table(
     fpr(chisq) > 0.3,
     fpr(perm) <= 0.10,
     power(perm) >= 0.9,
+    fpr(perm, "^E") <= 0.10,
+    isTRUE(all.equal(perm1[order(gene.tr), p.value], perm[order(gene.tr), p.value])),
     bh_gene[, uniqueN(p.value.adjusted), by = gene_name][, all(V1 == 1)] &&
       isTRUE(all.equal(bh_gene$p.value.adjusted, p.adjust(bh_gene$p.value, method = "BH"))),
     isTRUE(all.equal(chisq$delta_PU, chisq$PU.group1 - chisq$PU.group2)) &&

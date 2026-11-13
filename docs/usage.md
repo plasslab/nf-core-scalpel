@@ -256,8 +256,11 @@ a difference between clusters that are unevenly distributed across samples. Samp
 other (no `--clusters`) are single observations: differences between them can be technical or
 biological and cannot be separated without replicates.
 
-The permutations stop early for a gene once 20 permuted statistics exceed the observed one, so only
-genes with small p-values run the maximum number of permutations (smallest p-value 1/(n+1)).
+The same cell permutations are used for all genes (one sparse matrix product per batch of
+permutations), and they stop early for a gene once 20 permuted statistics exceed the observed one, so
+only genes with small p-values run the maximum number of permutations (smallest p-value 1/(n+1)).
+On GSE104556 (2 samples, ~11,700 cells, 7,000 genes tested), the differential isoform usage step
+takes ~1.5 min with `--diu_test permutation` (6 CPUs).
 
 For both tests, the p-values are adjusted (BH) once per gene and comparison, and a gene is
 `significant` when its adjusted p-value is < 0.05 **and** the usage of at least one tested isoform

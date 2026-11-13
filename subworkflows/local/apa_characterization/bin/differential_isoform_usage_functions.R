@@ -24,66 +24,73 @@ Read_isoformEnds = function(annot_files){
 }
 
 
-# Pearson X2 statistic of 2 x I tables, one table per row of S1 (counts of group 1), tot = isoform totals
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-X2_stat = function(S1, tot){
-    S1 = matrix(S1, ncol = length(tot))
-    N = sum(tot)
+# Permutation p-values of the X2 statistic for all tested genes at once
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#- cell labels permuted between the 2 groups (within strata), the same permutations for all genes:
+#  permuted counts of group 1 of all isoforms = one sparse product per batch of permutations
+#- sequential stopping per gene (Besag & Clifford 1991): a gene stops after `h` permuted statistics >= observed
+#- counts: tested isoforms x cells, gene: gene of each tested isoform, lab: 1/2 per cell, strata: sample per cell (or NULL)
+X2_genes = function(S1, tot, gid, M){
+    #- S1: permutations x isoforms counts of group 1 -> permutations x genes X2 statistics...
+    Nf = as.vector(tot %*% M)[gid]
+    r1 = as.matrix(S1 %*% M)[, gid, drop = FALSE]
+    E1 = sweep(r1, 2, tot / Nf, "*")
+    E2 = sweep(sweep(-r1, 2, Nf, "+"), 2, tot / Nf, "*")
     S2 = sweep(-S1, 2, tot, "+")
-    E1 = outer(rowSums(S1), tot) / N
-    E2 = outer(N - rowSums(S1), tot) / N
-    return(rowSums((S1 - E1)^2 / E1 + (S2 - E2)^2 / E2))
+    terms = (S1 - E1)^2 / E1 + (S2 - E2)^2 / E2
+    terms[!is.finite(terms)] = 0
+    return(as.matrix(terms %*% M))
 }
 
-
-# Permutation p-value of the X2 statistic: cells permuted between the 2 groups (within strata)
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#- X: cells x isoforms counts (cells expressing the gene), lab: 1/2, strata: sample of each cell (or NULL)
-#- sequential stopping (Besag & Clifford 1991): stop after `h` permuted statistics >= observed
-Perm_pvalue = function(X, lab, strata = NULL, n_perm = 10000, batch = 500, h = 20){
-    tot = colSums(X)
-    obs = X2_stat(colSums(X[lab == 1, , drop = FALSE]), tot)
+Perm_genes = function(counts, gene, lab, strata = NULL, n_perm = 10000, batch = 500, h = 20, seed = 1){
+    gid = as.integer(factor(gene, levels = unique(gene)))
+    G = max(gid)
+    tcounts = Matrix::t(counts)
+    tot = Matrix::colSums(tcounts)
+    M = Matrix::sparseMatrix(i = seq_along(gid), j = gid, x = 1, dims = c(length(gid), G))
+    obs = X2_genes(matrix(Matrix::colSums(tcounts[lab == 1, , drop = FALSE]), nrow = 1), tot, gid, M)[1, ]
     blocks = if(is.null(strata)) list(seq_along(lab)) else split(seq_along(lab), strata)
-    exceed = 0
-    done = 0
-    while(done < n_perm & exceed < h){
-        b = min(batch, n_perm - done)
-        #- membership of group 1 for each permutation (b x cells)...
-        P = matrix(0, nrow = b, ncol = length(lab))
+    exceed = numeric(G)
+    done = numeric(G)
+    active = seq_len(G)
+    set.seed(seed)
+    while(length(active) > 0){
+        b = min(batch, n_perm - min(done[active]))
+        #- group 1 membership of the cells for each permutation (cells x b)...
+        L = matrix(0, nrow = length(lab), ncol = b)
         for(i in seq_len(b)){
             perm = lab
             for(idx in blocks) perm[idx] = lab[idx][sample.int(length(idx))]
-            P[i, ] = perm == 1
+            L[, i] = perm == 1
         }
-        exceed = exceed + sum(X2_stat(P %*% X, tot) >= obs - 1e-9)
-        done = done + b
+        #- permuted X2 of the active genes...
+        fa = which(gid %in% active)
+        ga = match(gid[fa], active)
+        S1 = t(as.matrix(Matrix::crossprod(tcounts[, fa, drop = FALSE], L)))
+        x2 = X2_genes(S1, tot[fa], ga, M[fa, active, drop = FALSE])
+        exceed[active] = exceed[active] + colSums(sweep(x2, 2, obs[active] * (1 - 1e-9), ">="))
+        done[active] = done[active] + b
+        active = active[done[active] < n_perm & exceed[active] < h]
     }
-    return(list(statistic = obs, p.value = (exceed + 1) / (done + 1), n_perm = done))
+    return(data.table(gene_name = unique(gene), statistic = obs, p.value = (exceed + 1) / (done + 1), n_perm = as.integer(done)))
 }
 
 
-# Test of one gene between 2 groups (agg: isoforms x 2 aggregated counts)
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Test_gene = function(agg, X, lab, strata, test, threshold_abund, threshold_var, n_perm){
+# Filters & X2 test of one gene between 2 groups (agg: isoforms x 2 aggregated counts)
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Test_gene = function(agg, threshold_abund, threshold_var){
     pu = sweep(agg, 2, pmax(colSums(agg), 1e-12), "/")
     res = data.table(
         thr.abund = apply(pu, 1, function(x) all(x < threshold_abund)),
         thr.var = abs(pu[, 1] - pu[, 2]) < threshold_var,
-        statistic = NA_real_, p.value = NA_real_, n_perm = NA_integer_)
+        tested = FALSE, statistic = NA_real_, p.value = NA_real_)
     keep = which(!res$thr.abund)
     #- X2 test if more than 1 isoform following the abundance filter & X2 conditions (expected counts >= 5)...
     if(length(keep) > 1){
-        numTab = agg[keep, , drop = FALSE]
-        chi2_res = suppressWarnings(chisq.test(numTab))
+        chi2_res = suppressWarnings(chisq.test(agg[keep, , drop = FALSE]))
         if(all(round(chi2_res$expected, 0) >= 5)){
-            if(test == "chisq"){
-                res[, `:=`(statistic = unname(chi2_res$statistic), p.value = chi2_res$p.value)]
-            } else {
-                Xg = X[, keep, drop = FALSE]
-                expressed = rowSums(Xg) > 0
-                pr = Perm_pvalue(Xg[expressed, , drop = FALSE], lab[expressed], if(is.null(strata)) NULL else strata[expressed], n_perm)
-                res[, `:=`(statistic = pr$statistic, p.value = pr$p.value, n_perm = as.integer(pr$n_perm))]
-            }
+            res[keep, tested := TRUE]
+            res[, `:=`(statistic = unname(chi2_res$statistic), p.value = chi2_res$p.value)]
         }
     }
     return(res)
@@ -98,15 +105,24 @@ Compare_groups = function(counts, lab, strata, features, ends, test, threshold_a
     genes = split(seq_len(nrow(features)), features$gene_name)
     genes = genes[lengths(genes) > 1]
     if(length(genes) == 0) return(NULL)
-    tcounts = if(test == "permutation") Matrix::t(counts) else NULL
 
-    #- one test per gene (seed per gene: reproducible whatever the number of cores)...
-    res = rbindlist(parallel::mclapply(seq_along(genes), function(i){
-        set.seed(seed + i)
-        idx = genes[[i]]
-        X = if(test == "permutation") as.matrix(tcounts[, idx, drop = FALSE]) else NULL
-        cbind(features[idx], Test_gene(agg[idx, , drop = FALSE], X, lab, strata, test, threshold_abund, threshold_var, n_perm))
-    }, mc.cores = cores))
+    #- filters & X2 test per gene...
+    res = rbindlist(lapply(genes, function(idx) cbind(features[idx], Test_gene(agg[idx, , drop = FALSE], threshold_abund, threshold_var))))
+    res[, n_perm := NA_integer_]
+
+    #- permutation p-values of the tested genes (genes split on the cores, same permutations for all genes)...
+    if(test == "permutation" & any(res$tested)){
+        tested = res[tested == TRUE, .(row, gene_name)]
+        chunks = split(unique(tested$gene_name), rep_len(seq_len(cores), uniqueN(tested$gene_name)))
+        perm = rbindlist(parallel::mclapply(chunks, function(g){
+            sub = tested[gene_name %in% g]
+            Perm_genes(counts[sub$row, , drop = FALSE], sub$gene_name, lab, strata, n_perm, seed = seed)
+        }, mc.cores = cores))
+        res[, c("statistic", "p.value") := NULL]
+        res = merge(res, perm, by = "gene_name", all.x = TRUE, sort = FALSE, suffixes = c(".x", ""))
+        res[, n_perm.x := NULL]
+    }
+    res[, tested := NULL]
 
     #- isoform usage (PU) per group, change of usage & weighted 3' end shift (+: group1 uses more distal 3' ends)...
     res = cbind(res, counts.group1 = agg[res$row, 1], counts.group2 = agg[res$row, 2])
