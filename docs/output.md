@@ -53,8 +53,9 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
     counts per group (one column per group, as the original table), `test`, `n_perm`.
 
   Genes with a differential isoform usage: `p.value.adjusted < 0.05`, `max_delta_PU >= --diu_min_delta`
-  and, with several samples, `replicated` (change in the same direction in each sample with >= 20 gene UMIs in
-  both groups, at least 2 such samples; `NA` with a single sample).
+  and, when the groups are shared by several samples, `replicated` (change in the same direction in each
+  sample with >= 20 gene UMIs in both groups, at least 2 such samples; `NA`: replication not applicable,
+  fewer than 2 samples with cells of both groups).
 
 </details>
 

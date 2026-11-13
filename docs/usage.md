@@ -282,7 +282,8 @@ no preferred direction.
 changing isoform of each gene is measured in each sample (`delta_PU_by_sample`; samples with >= 20 UMIs
 of the gene in both groups: `n_samples`). The change is `replicated` when it has the same sign and at
 least half of `--diu_min_delta` in every evaluable sample, with at least 2 evaluable samples (otherwise
-`replicated` FALSE: not significant; `NA` only without replicates, e.g. samples compared). On GSE104556,
+`replicated` FALSE: not significant). Replication is not applicable (`NA`) when fewer than 2 samples
+hold cells of both groups: samples compared (no `--clusters`), or each cluster in its own sample. On GSE104556,
 some genes switch isoforms in one mouse only (e.g. Cpne1: change of 0.75 in one sample, 0 in the other).
 
 **Warnings.** The pipeline warns (log and `differential/DIU_warnings.txt`) when samples are compared

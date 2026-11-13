@@ -205,8 +205,10 @@ FindIsoforms = function(counts, groups, strata = NULL, ends = NULL, test = "chis
         cells = which(!is.na(lab))
         #- strata (samples) used only if a sample holds cells of both groups (else not stratified)...
         st = if(is.null(strata)) NULL else as.character(strata)[cells]
+        n_shared = 0
         if(!is.null(st)){
             both = tapply(lab[cells], st, function(x) length(unique(x)) == 2)
+            n_shared = sum(both)
             if(!any(both)){
                 message("  groups not shared by any sample: permutation not stratified by sample")
                 st = NULL
@@ -215,12 +217,12 @@ FindIsoforms = function(counts, groups, strata = NULL, ends = NULL, test = "chis
         res = Compare_groups(counts[, cells, drop = FALSE], lab[cells], st, features, ends, test,
                              threshold_abund, threshold_var, n_perm, cores, seed)
         if(is.null(res)) return(NULL)
-        #- replication of the change in each sample (clusters compared across samples)...
-        rep = if(is.null(strata)) NULL else Replicate_effects(counts[, cells, drop = FALSE], lab[cells], as.character(strata)[cells], res, threshold_var)
+        #- replication of the change in each sample (groups shared by >= 2 samples; else not applicable: NA)...
+        rep = if(n_shared < 2) NULL else Replicate_effects(counts[, cells, drop = FALSE], lab[cells], as.character(strata)[cells], res, threshold_var)
         if(is.null(rep)) rep = data.table(gene_name = character(), replication_isoform = character(), n_samples = integer(), n_samples_consistent = integer(), delta_PU_by_sample = character(), replicated = logical())
         res = merge(res, rep, by = "gene_name", all.x = TRUE, sort = FALSE)
-        #- with >= 2 samples, genes without replication result are not replicated (NA: single sample, no replication)...
-        if(!is.null(strata) && length(unique(as.character(strata)[cells])) >= 2) res[is.na(replicated), replicated := FALSE]
+        #- groups shared by >= 2 samples: genes without replication result are not replicated (NA: replication not applicable)...
+        if(n_shared >= 2) res[is.na(replicated), replicated := FALSE]
         res[, `:=`(comparison = paste0(cmp[1], "_vs_", cmp[2]), group1 = cmp[1], group2 = cmp[2])]
         return(res)
     })

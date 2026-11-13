@@ -69,6 +69,10 @@ rep_counts = rbind(cmp2("RC", c(0.7, 0.3), c(0.3, 0.7), c(0.7, 0.3), c(0.3, 0.7)
     cbind(sim_gene("RL", c(0.8, 0.2), c(0.2, 0.8), 200, 200, conc = 50, depth = 20), sim_gene("RL", c(0.8, 0.2), c(0.2, 0.8), 200, 200, conc = 50, depth = 0.03)))
 colnames(rep_counts) = paste0("cell", seq_len(ncol(rep_counts)))
 rep_res = FindIsoforms(rep_counts, rep(rep(c("A", "B"), each = 200), 2), strata = rep(c("S1", "S2"), each = 400), test = "chisq")
+#- groups confounded with samples (A only in S1, B only in S2): replication not applicable...
+conf_counts = cbind(sim_gene("RX", c(0.8, 0.2), c(0.8, 0.2), 200, 200, conc = 50, depth = 20), sim_gene("RX", c(0.2, 0.8), c(0.2, 0.8), 200, 200, conc = 50, depth = 20))
+colnames(conf_counts) = paste0("cell", seq_len(ncol(conf_counts)))
+conf_res = FindIsoforms(conf_counts, rep(c("A", "B"), each = 400), strata = rep(c("S1", "S2"), each = 400), test = "chisq")
 genes = function(res) unique(res[!is.na(p.value)], by = c("comparison", "gene_name"))
 rep_genes = genes(rep_res)
 genes_chisq = genes(chisq)
@@ -103,6 +107,7 @@ checks = data.table(
     "replication: change in the same direction in both samples -> replicated & significant",
     "replication: opposite changes in the 2 samples -> not replicated, not significant (despite p < 0.05)",
     "replication: change not evaluable in 2 samples (too few UMIs in one) -> replicated FALSE, not significant (despite p < 0.05)",
+    "replication: groups confounded with samples (each group in one sample) -> replicated NA (not applicable), significant",
     "one row per isoform, gene-level columns identical on the rows of a gene",
     "isoforms of a gene from proximal to distal 3' end, tested flag, counts summing to the gene UMIs, sorted by adjusted p-value, gene & isoform first"),
   pass = c(
@@ -128,6 +133,7 @@ checks = data.table(
     rep_genes[gene_name == "RC", isTRUE(replicated) & significant & n_samples == 2],
     rep_genes[gene_name == "RO", p.value < 0.05 & isFALSE(replicated) & !significant],
     rep_genes[gene_name == "RL", p.value < 0.05 & isFALSE(replicated) & n_samples == 1 & !significant],
+    genes(conf_res)[gene_name == "RX", is.na(replicated) & significant],
     chisq[, .N, by = .(comparison, gene.tr)][, all(N == 1)] & chisq[, .(n = uniqueN(paste(p.value.adjusted, significant, event_type, replicated))), by = .(comparison, gene_name)][, all(n == 1)],
     identical(chisq[gene_name == "D001"]$transcript_name, c("D001-101", "D001-201")) & all(chisq[gene_name == "D001"]$tested) &
       chisq[gene_name == "D001", isTRUE(all.equal(sum(counts.group1), umis.group1[1]))] &
