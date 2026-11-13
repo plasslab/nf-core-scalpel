@@ -232,7 +232,8 @@ diu.table %>% filter(event_type == "tandem_3UTR") %>% distinct(comparison, gene_
 
 ### Isoform usage of a gene
 
-For example, the gene **Mdm2** uses more its proximal 3' end (shorter 3' UTR) in round spermatids than in the other cells, in both mice:
+For example, the gene **Mdm2** switches from its distal 3' end (Mdm2-201, long 3' UTR) in spermatocytes to a proximal 3' end (Mdm2-205,
+short 3' UTR) in round and elongating spermatids, in both mice:
 
 ```{r mdm2_table}
 diu.table %>% filter(gene_name == "Mdm2", comparison == "round spermatids_vs_rest") %>%
@@ -240,6 +241,8 @@ diu.table %>% filter(gene_name == "Mdm2", comparison == "round spermatids_vs_res
     mutate(p.value.adjusted = format(p.value.adjusted, digits = 2)) %>%
     knitr::kable(digits = 3)
 ```
+
+`scalpelR::plotUsage` shows the usage of each isoform in each group of cells (bars: cells of the two mice, points: each mouse):
 
 ```{r mdm2_usage}
 #| fig-width: 8
