@@ -180,7 +180,8 @@ Replicate_effects = function(counts, lab, samples, res, threshold_var, min_umis 
     eff[, consistent := ok & sign(d) == sign(delta_PU) & abs(d) >= threshold_var / 2]
     eff = eff[, .(replication_isoform = transcript_name[1], n_samples = sum(ok), n_samples_consistent = sum(consistent),
                   delta_PU_by_sample = paste0(sample, ":", ifelse(ok, round(d, 3), "NA"), collapse = ";")), by = gene_name]
-    eff[, replicated := fifelse(n_samples >= 2, n_samples_consistent == n_samples, NA)]
+    #- replicated: change consistent in >= 2 evaluable samples (FALSE by default: not evaluable in 2 samples)
+    eff[, replicated := n_samples >= 2 & n_samples_consistent == n_samples]
     return(eff)
 }
 
@@ -218,6 +219,8 @@ FindIsoforms = function(counts, groups, strata = NULL, ends = NULL, test = "chis
         rep = if(is.null(strata)) NULL else Replicate_effects(counts[, cells, drop = FALSE], lab[cells], as.character(strata)[cells], res, threshold_var)
         if(is.null(rep)) rep = data.table(gene_name = character(), replication_isoform = character(), n_samples = integer(), n_samples_consistent = integer(), delta_PU_by_sample = character(), replicated = logical())
         res = merge(res, rep, by = "gene_name", all.x = TRUE, sort = FALSE)
+        #- with >= 2 samples, genes without replication result are not replicated (NA: single sample, no replication)...
+        if(!is.null(strata) && length(unique(as.character(strata)[cells])) >= 2) res[is.na(replicated), replicated := FALSE]
         res[, `:=`(comparison = paste0(cmp[1], "_vs_", cmp[2]), group1 = cmp[1], group2 = cmp[2])]
         return(res)
     })
@@ -233,7 +236,7 @@ FindIsoforms = function(counts, groups, strata = NULL, ends = NULL, test = "chis
     all_results = merge(agg_all, all_results, by = "gene.tr", sort = FALSE)
 
     #- significant genes: adjusted p-value & change of usage of at least one tested isoform...
-    #- ... and, with clusters compared across samples, a change in the same direction in each evaluable sample...
+    #- ... and, with clusters compared across samples, a change in the same direction in >= 2 evaluable samples...
     all_results[, significant := !is.na(p.value.adjusted) & p.value.adjusted < threshold_pval & max_delta_PU >= threshold_var & (is.na(replicated) | replicated)]
     all_results[, test := test]
     all_results[, row := NULL]
