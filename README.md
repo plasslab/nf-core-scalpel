@@ -93,6 +93,8 @@ The internal priming reference is built from `--genome`; a pre-built one can be 
 | `--binsize`          | `20`    | Bin size (nt) of the read distance distribution.                             |
 | `--em_tol`           | `1e-6`  | EM convergence tolerance.                                                    |
 | `--em_max_iter`      | `1000`  | Maximum number of EM iterations.                                             |
+| `--diu_test`         | `chisq` | Differential isoform usage test: `chisq` or `permutation` (cells permuted).  |
+| `--diu_min_delta`    | `0.1`   | Minimal isoform usage change for a significant gene.                         |
 
 See the [usage documentation](docs/usage.md) for details.
 

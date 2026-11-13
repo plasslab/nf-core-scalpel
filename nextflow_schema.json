@@ -323,6 +323,31 @@
                     "description": "EM convergence tolerance (maximum change of isoform abundances between iterations).",
                     "help_text": "Default 1e-6 (EM run to convergence). Original SCALPEL: 0.01, which stops before isoforms supported by no fragment reach 0. Use --em_tol 0.01 --em_max_iter 30 to reproduce it.",
                     "fa_icon": "fas fa-bullseye"
+                },
+                "diu_test": {
+                    "type": "string",
+                    "default": "chisq",
+                    "enum": ["chisq", "permutation"],
+                    "description": "Differential isoform usage test.",
+                    "help_text": "chisq (default, original SCALPEL): X2 test per gene on the counts aggregated by group (UMIs as observations). permutation: same X2 statistic, p-value from permutations of the cells between the compared groups (within samples when clusters are compared), accounting for the cell-to-cell variability of the isoform usage.",
+                    "fa_icon": "fas fa-random"
+                },
+                "diu_min_delta": {
+                    "type": "number",
+                    "default": 0.1,
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Minimal change of isoform usage between groups for a significant gene.",
+                    "help_text": "A gene is significant if its adjusted p-value is < 0.05 and the usage (fraction of the gene counts) of at least one tested isoform changes by at least this value between the compared groups (column thr.var: change below it).",
+                    "fa_icon": "fas fa-arrows-alt-h"
+                },
+                "diu_permutations": {
+                    "type": "integer",
+                    "default": 10000,
+                    "minimum": 100,
+                    "description": "Maximal number of cell permutations per gene (--diu_test permutation).",
+                    "help_text": "Sequential stopping: a gene stops after 20 permuted statistics above the observed one, so only genes with small p-values reach the maximum (smallest p-value: 1/(n+1)).",
+                    "fa_icon": "fas fa-sync"
                 }
             }
         }

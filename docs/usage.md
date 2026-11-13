@@ -235,6 +235,38 @@ SRR6129051	AAACCTGTCAACGAAA-1	Tcells
 The pipeline reports how many cells were matched, ignores cells without a cluster and stops
 with an explicit message if no cell matches (usually a sample name or barcode suffix mismatch).
 
+### Differential isoform usage test (`--diu_test`)
+
+For each gene, the isoform counts are aggregated per group and the isoform usage (fraction of the
+gene counts) is compared between groups: 2 groups are compared with each other, more than 2 groups
+each against the rest of the cells. Isoforms below 5% of the gene counts in both groups are not tested
+(`thr.abund`); genes are tested when at least 2 isoforms remain and all expected counts are >= 5.
+
+| `--diu_test`            | p-value                                                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `chisq` (default)       | X2 test on the aggregated counts (original SCALPEL). UMIs are treated as independent observations.                                     |
+| `permutation`           | Same X2 statistic, null distribution from permutations of the **cells** between the compared groups (`--diu_permutations`, default 10000). |
+
+The X2 test ignores that isoform usage varies from cell to cell: with thousands of cells, small
+changes become highly significant (on simulated cells with identical usage in both groups but
+cell-to-cell variability, 60% of the genes have p < 0.05 with `chisq`, 4% with `permutation`).
+The permutation test uses the cells as units, needs no replicates, and with `--clusters` permutes
+the cells **within each sample**, so that a difference between samples (batch) is not reported as
+a difference between clusters that are unevenly distributed across samples. Samples compared to each
+other (no `--clusters`) are single observations: differences between them can be technical or
+biological and cannot be separated without replicates.
+
+The permutations stop early for a gene once 20 permuted statistics exceed the observed one, so only
+genes with small p-values run the maximum number of permutations (smallest p-value 1/(n+1)).
+
+For both tests, the p-values are adjusted (BH) once per gene and comparison, and a gene is
+`significant` when its adjusted p-value is < 0.05 **and** the usage of at least one tested isoform
+changes by at least `--diu_min_delta` (default 0.1; isoforms with a smaller change: `thr.var`).
+
+```bash
+nextflow run nf-core/scalpel ... --clusters clusters.tsv --diu_test permutation
+```
+
 ### Adding samples later (`--isoform_annotation`)
 
 SCALPEL selects the isoforms once from **all** samples (pseudobulk). To keep the isoform set

@@ -14,6 +14,7 @@ workflow APA_CHARACTERIZATION {
     ch_idge // channel: [ val(meta), path(iDGE dir) ] from ISOFORM_QUANTIFICATION
     ch_filtered_reads // channel: [ val(meta), val(seqname), path(ip_filtered.fst) ] from READS_PROCESSING
     ch_chr_bams // channel: [ val(seqname), val(meta), path(chr.bam) ] from READS_PROCESSING
+    ch_annots // channel: [ val(seqname), path(annots.gz) ] selected isoforms (3' ends)
 
     main:
     ch_versions = channel.empty()
@@ -25,6 +26,10 @@ workflow APA_CHARACTERIZATION {
     DIFFERENTIAL_ISOFORM_USAGE(
         ch_idge.map{ it = it[1] }.collect(),
         clusters_file,
+        ch_annots.map{ it = it[1] }.collect(),
+        params.diu_test,
+        params.diu_min_delta,
+        params.diu_permutations,
         file("${projectDir}/subworkflows/local/apa_characterization/bin/differential_isoform_usage.R"),
         file("${projectDir}/subworkflows/local/apa_characterization/bin/differential_isoform_usage_functions.R")
     )

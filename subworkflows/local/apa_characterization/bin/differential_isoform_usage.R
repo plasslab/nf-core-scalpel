@@ -14,12 +14,17 @@ parser$add_argument('--idge', type="character", help='path of directory containi
 parser$add_argument('--clusters', type="character", default="NULL", help='path of clusters file (orig.ident, Barcodes, Clusters) or NULL')
 parser$add_argument('--output', type="character", help='path of output DIU table')
 parser$add_argument('--output_rds', type="character", help='path of output seurat file')
+parser$add_argument('--annotations', type="character", default="NULL", help='path of directory containing the isoform annotation (*.annots.gz) or NULL')
+parser$add_argument('--test', type="character", default="chisq", help='DIU test: chisq (default, original) or permutation')
+parser$add_argument('--min_delta', type="double", default=0.1, help='minimal change of isoform usage between groups (default: 0.1)')
+parser$add_argument('--permutations', type="integer", default=10000, help='maximal number of cell permutations (test permutation, default: 10000)')
+parser$add_argument('--cpus', type="integer", default=1, help='number of cores')
 args = parser$parse_args()
 
 
 THR_ABUND = 0.05
 THR_PVAL = 0.05
-THR_VAR = 0.05
+THR_VAR = args$min_delta
 
 
 #get iDGE directories
@@ -89,7 +94,22 @@ print(seurat.obj)
 if(n_distinct(seurat.obj$Clusters) == 1){
 	my_isoforms = data.table(output="Provide more condition with levels > 1 for differential isoform usage analysis")
 }else{
-	my_isoforms = FindIsoforms(JoinLayers(seurat.obj), group_by="Clusters", threshold_pval=THR_PVAL, threshold_abund=THR_ABUND, threshold_var=THR_VAR, extended=T) %>% suppressWarnings()
+	#- isoform 3' ends (direction of the 3' end shifts)...
+	annot_files = if(args$annotations == "NULL") character(0) else list.files(args$annotations, pattern = "annots.gz$", full.names = T)
+	ends = Read_isoformEnds(annot_files)
+	#- cells permuted within samples when clusters are compared...
+	strata = if(args$clusters == "NULL") NULL else seurat.obj$orig.ident
+	my_isoforms = FindIsoforms(
+		counts = SeuratObject::LayerData(JoinLayers(seurat.obj), layer = "counts"),
+		groups = seurat.obj$Clusters,
+		strata = strata,
+		ends = ends,
+		test = args$test,
+		threshold_pval = THR_PVAL,
+		threshold_abund = THR_ABUND,
+		threshold_var = THR_VAR,
+		n_perm = args$permutations,
+		cores = args$cpus)
 }
 
 #Writing differential analysis table (4)

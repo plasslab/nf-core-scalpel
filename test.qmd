@@ -207,6 +207,9 @@ check("output", "DIU_table.csv & iDGE_seurat.RDS written",
 if(file.exists(diu_file)){
   diu = fread(diu_file)
   check("output", "DIU table compares the samples (one column per sample)", all(SAMPLES %in% colnames(diu)))
+  check("output", "DIU table reports usage change, 3' end shift and significance",
+    all(c("comparison", "PU.group1", "PU.group2", "delta_PU", "delta_3end", "p.value.adjusted", "significant") %in% colnames(diu)))
+  check("output", "DIU: one adjusted p-value per gene", diu[!is.na(p.value.adjusted), uniqueN(p.value.adjusted), by = .(comparison, gene_name)][, all(V1 == 1)])
   knitr::kable(head(diu[order(p.value.adjusted)], 6), digits = 4)
 }
 
@@ -421,6 +424,26 @@ if(status == 0){
 }
 ```
 
+## Differential isoform usage tests
+
+Simulated cells whose isoform usage varies from cell to cell (Dirichlet) with UMIs per cell ~ Poisson
+(`tests/unit/diu_test.R`). The original pseudobulk X2 test (`--diu_test chisq`) treats UMIs as
+independent observations; the permutation test (`--diu_test permutation`) permutes the cells between
+the compared groups (within samples when clusters are compared). Also checked: BH adjustment once per
+gene, usage change / 3' end shift, `--diu_min_delta`, comparisons with more than 2 groups.
+
+```{r diu-tests}
+out_dir = file.path(TMP, "diu")
+status = run_rscript(c("tests/unit/diu_test.R", file.path(PROJECT_DIR, "subworkflows/local/apa_characterization/bin/differential_isoform_usage_functions.R"), out_dir), file.path(TMP, "diu.log"))
+check("diu", "DIU test runs", status == 0 | file.exists(file.path(out_dir, "checks.tsv")))
+if(file.exists(file.path(out_dir, "checks.tsv"))){
+  res = fread(file.path(out_dir, "checks.tsv"))
+  for(i in seq_len(nrow(res))) check("diu", res$check[i], isTRUE(res$pass[i]))
+} else {
+  cat(readLines(file.path(TMP, "diu.log")), sep = "\n")
+}
+```
+
 ## #38 / #28 — iDGE beyond R's integer limit
 
 50,000 cells x 50,000 isoforms (dense: 2.5e9 entries > `.Machine$integer.max`),
@@ -601,6 +624,15 @@ check("#32", "run with --clusters completes", res$status == 0)
 if(res$status == 0){
   diu = fread(file.path(res$outdir, "differential/DIU_table.csv"))
   check("#32", "DIU table compares the clusters (clusterA, clusterB)", all(c("clusterA", "clusterB") %in% colnames(diu)))
+}
+
+#- permutation test on the same clusters (cells permuted within samples)...
+res = run_pipeline("diu_permutation", c("--clusters", clusters_ok, "--diu_test", "permutation", "--diu_permutations", "2000"))
+check("diu", "run with --diu_test permutation completes", res$status == 0)
+if(res$status == 0){
+  diu = fread(file.path(res$outdir, "differential/DIU_table.csv"))
+  check("diu", "permutation DIU table: test column, p-values from cell permutations (n_perm)",
+    all(diu$test == "permutation") & any(!is.na(diu$n_perm)) & all(diu$p.value >= 1 / 2001, na.rm = TRUE))
 }
 
 #- clusters file with barcodes that do not match (e.g. missing '-1' suffix)...

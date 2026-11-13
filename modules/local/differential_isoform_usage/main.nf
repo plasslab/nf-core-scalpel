@@ -10,6 +10,10 @@ process DIFFERENTIAL_ISOFORM_USAGE {
     input:
         path(idge_dirs, stageAs: "idge/*")
         path(clusters)
+        path(annotations, stageAs: "annots/*")
+        val(diu_test)
+        val(min_delta)
+        val(permutations)
         path(script)
         path(library)
 
@@ -21,11 +25,19 @@ process DIFFERENTIAL_ISOFORM_USAGE {
     script:
     def clusters_arg = clusters.name == 'NO_CLUSTERS' ? 'NULL' : "${clusters}"
     """
+    #- one BLAS thread per worker (genes are tested in parallel on ${task.cpus} cores)...
+    export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+
     Rscript ${script} \
         --idge idge \
         --clusters ${clusters_arg} \
         --output DIU_table.csv \
-        --output_rds iDGE_seurat.RDS
+        --output_rds iDGE_seurat.RDS \
+        --annotations annots \
+        --test ${diu_test} \
+        --min_delta ${min_delta} \
+        --permutations ${permutations} \
+        --cpus ${task.cpus}
 
     # Write versions.yml
     echo '"${task.process}":' > versions.yml

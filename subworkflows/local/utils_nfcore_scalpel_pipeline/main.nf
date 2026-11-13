@@ -101,6 +101,8 @@ Pipeline options
   gene_fraction       : ${params.gene_fraction}
   binsize             : ${params.binsize}
   em_tol / max_iter   : ${params.em_tol} / ${params.em_max_iter}
+  diu_test            : ${params.diu_test}${params.diu_test == 'permutation' ? " (${params.diu_permutations} permutations max)" : ''}
+  diu_min_delta       : ${params.diu_min_delta}
   barcodes_whitelist  : ${params.barcodes_whitelist ?: 'not provided'}
 ------------------------------------------------------
 """.stripIndent()
