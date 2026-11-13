@@ -67,8 +67,9 @@ cmp2 = function(g, a1, b1, a2, b2) cbind(sim_gene(g, a1, b1, 200, 200, conc = 50
 rep_counts = rbind(cmp2("RC", c(0.7, 0.3), c(0.3, 0.7), c(0.7, 0.3), c(0.3, 0.7)), cmp2("RO", c(0.9, 0.1), c(0.1, 0.9), c(0.35, 0.65), c(0.65, 0.35)))
 colnames(rep_counts) = paste0("cell", seq_len(ncol(rep_counts)))
 rep_res = FindIsoforms(rep_counts, rep(rep(c("A", "B"), each = 200), 2), strata = rep(c("S1", "S2"), each = 400), test = "chisq")
-rep_genes = Summarize_genes(rep_res)
-genes_chisq = Summarize_genes(chisq)
+genes = function(res) unique(res[!is.na(p.value)], by = c("comparison", "gene_name"))
+rep_genes = genes(rep_res)
+genes_chisq = genes(chisq)
 
 #- > 2 groups: each group vs the rest...
 multi = FindIsoforms(counts[, 1:600], rep(c("A", "B", "C"), 200), test = "chisq", cores = 2)
@@ -99,7 +100,8 @@ checks = data.table(
     "dominant isoform of each group and isoform switch (D001: -101 in A, -201 in B)",
     "replication: change in the same direction in both samples -> replicated & significant",
     "replication: opposite changes in the 2 samples -> not replicated, not significant (despite p < 0.05)",
-    "gene table: one row per gene and comparison"),
+    "one row per isoform, gene-level columns identical on the rows of a gene",
+    "isoforms of a gene from proximal to distal 3' end, tested flag, counts summing to the gene UMIs, significant genes first"),
   pass = c(
     fpr(chisq) > 0.3,
     fpr(perm) <= 0.10,
@@ -122,7 +124,10 @@ checks = data.table(
     genes_chisq[gene_name == "D001", top_isoform.group1 == "D001-101" & top_isoform.group2 == "D001-201" & switch],
     rep_genes[gene_name == "RC", isTRUE(replicated) & significant & n_samples == 2],
     rep_genes[gene_name == "RO", p.value < 0.05 & isFALSE(replicated) & !significant],
-    genes_chisq[, .N, by = .(comparison, gene_name)][, all(N == 1)]))
+    chisq[, .N, by = .(comparison, gene.tr)][, all(N == 1)] & chisq[, .(n = uniqueN(paste(p.value.adjusted, significant, event_type, replicated))), by = .(comparison, gene_name)][, all(n == 1)],
+    identical(chisq[gene_name == "D001"]$transcript_name, c("D001-101", "D001-201")) & all(chisq[gene_name == "D001"]$tested) &
+      chisq[gene_name == "D001", isTRUE(all.equal(sum(counts.group1), umis.group1[1]))] &
+      chisq[, !is.unsorted(!significant)]))
 fwrite(checks, file.path(OUT, "checks.tsv"), sep = "\t")
 print(checks)
 quit(status = ifelse(all(checks$pass), 0, 1))

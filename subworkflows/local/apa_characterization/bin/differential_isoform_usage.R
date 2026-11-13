@@ -20,7 +20,6 @@ parser$add_argument('--min_delta', type="double", default=0.1, help='minimal cha
 parser$add_argument('--permutations', type="integer", default=10000, help='maximal number of cell permutations (test permutation, default: 10000)')
 parser$add_argument('--cpus', type="integer", default=1, help='number of cores')
 parser$add_argument('--probabilities', type="character", default="NULL", help='path of directory containing the <sample>.prob read distance distributions or NULL')
-parser$add_argument('--output_genes', type="character", default="DIU_genes.csv", help='path of output gene-level DIU table')
 parser$add_argument('--output_qc', type="character", default="samples_qc.tsv", help='path of output samples QC table')
 parser$add_argument('--output_warnings', type="character", default="DIU_warnings.txt", help='path of output warnings')
 args = parser$parse_args()
@@ -149,5 +148,4 @@ if(length(warnings) > 0){
 #Writing differential analysis tables (5)
 #***************************************
 fwrite(my_isoforms, file=args$output, sep="\t", nThread=1)
-fwrite(Summarize_genes(my_isoforms), file=args$output_genes, sep="\t", nThread=1)
 saveRDS(seurat.obj, file=args$output_rds)

@@ -50,7 +50,6 @@ workflow APA_CHARACTERIZATION {
 
     emit:
     diu_table = DIFFERENTIAL_ISOFORM_USAGE.out.diu_table   // path: DIU_table.csv
-    diu_genes = DIFFERENTIAL_ISOFORM_USAGE.out.diu_genes   // path: DIU_genes.csv
     seurat_obj = DIFFERENTIAL_ISOFORM_USAGE.out.seurat_obj // path: iDGE_seurat.RDS
     filtered_bams = FILTERED_BAMS.out.filtered_bams        // channel: [ val(meta), bam, bai ]
     versions = ch_versions                                 // channel: [ versions.yml ]

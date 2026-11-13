@@ -128,6 +128,7 @@ Compare_groups = function(counts, lab, strata, features, ends, test, threshold_a
     res = cbind(res, counts.group1 = agg[res$row, 1], counts.group2 = agg[res$row, 2])
     res[, `:=`(PU.group1 = counts.group1 / pmax(sum(counts.group1), 1e-12), PU.group2 = counts.group2 / pmax(sum(counts.group2), 1e-12)), by = gene_name]
     res[, delta_PU := PU.group1 - PU.group2]
+    res[, `:=`(umis.group1 = sum(counts.group1), umis.group2 = sum(counts.group2), tested = !is.na(p.value) & !thr.abund), by = gene_name]
     #- dominant isoform of each group & isoform switch...
     res[, `:=`(top_isoform.group1 = transcript_name[which.max(PU.group1)], top_isoform.group2 = transcript_name[which.max(PU.group2)]), by = gene_name]
     res[, switch := top_isoform.group1 != top_isoform.group2]
@@ -161,7 +162,8 @@ Compare_groups = function(counts, lab, strata, features, ends, test, threshold_a
 Replicate_effects = function(counts, lab, samples, res, threshold_var, min_umis = 20){
     tested = res[!is.na(p.value)]
     if(nrow(tested) == 0) return(NULL)
-    top = tested[thr.abund == FALSE, .SD[which.max(abs(delta_PU))], by = gene_name, .SDcols = c("row", "delta_PU")]
+    #- most changing isoform (ties: the increased one)...
+    top = tested[thr.abund == FALSE][order(gene_name, -abs(round(delta_PU, 9)), -delta_PU)][, .SD[1], by = gene_name, .SDcols = c("row", "transcript_name", "delta_PU")]
     gene_rows = tested[, .(row), by = gene_name]
     eff = rbindlist(lapply(sort(unique(samples)), function(s){
         c1 = which(lab == 1 & samples == s)
@@ -176,27 +178,10 @@ Replicate_effects = function(counts, lab, samples, res, threshold_var, min_umis 
     }))
     if(nrow(eff) == 0) return(NULL)
     eff[, consistent := ok & sign(d) == sign(delta_PU) & abs(d) >= threshold_var / 2]
-    eff = eff[, .(n_samples = sum(ok), n_samples_consistent = sum(consistent),
+    eff = eff[, .(replication_isoform = transcript_name[1], n_samples = sum(ok), n_samples_consistent = sum(consistent),
                   delta_PU_by_sample = paste0(sample, ":", ifelse(ok, round(d, 3), "NA"), collapse = ";")), by = gene_name]
     eff[, replicated := fifelse(n_samples >= 2, n_samples_consistent == n_samples, NA)]
     return(eff)
-}
-
-
-# Gene-level summary of a DIU table (one row per gene and comparison)
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Summarize_genes = function(res){
-    if(!("p.value" %in% colnames(res))) return(res)
-    genes = res[!is.na(p.value), .(
-        group1 = group1[1], group2 = group2[1], event_type = event_type[1], direction = direction[1],
-        n_isoforms_tested = sum(!thr.abund), top_isoform.group1 = top_isoform.group1[1], top_isoform.group2 = top_isoform.group2[1],
-        switch = switch[1], umis.group1 = sum(counts.group1), umis.group2 = sum(counts.group2),
-        max_delta_PU = max_delta_PU[1], delta_3end = delta_3end[1], statistic = statistic[1], p.value = p.value[1],
-        p.value.adjusted = p.value.adjusted[1], n_samples = n_samples[1], n_samples_consistent = n_samples_consistent[1],
-        replicated = replicated[1], delta_PU_by_sample = delta_PU_by_sample[1], significant = significant[1], test = test[1]),
-        by = .(comparison, gene_name)]
-    setorder(genes, comparison, -significant, p.value.adjusted, -max_delta_PU)
-    return(genes)
 }
 
 
@@ -231,7 +216,7 @@ FindIsoforms = function(counts, groups, strata = NULL, ends = NULL, test = "chis
         if(is.null(res)) return(NULL)
         #- replication of the change in each sample (clusters compared across samples)...
         rep = if(is.null(strata)) NULL else Replicate_effects(counts[, cells, drop = FALSE], lab[cells], as.character(strata)[cells], res, threshold_var)
-        if(is.null(rep)) rep = data.table(gene_name = character(), n_samples = integer(), n_samples_consistent = integer(), delta_PU_by_sample = character(), replicated = logical())
+        if(is.null(rep)) rep = data.table(gene_name = character(), replication_isoform = character(), n_samples = integer(), n_samples_consistent = integer(), delta_PU_by_sample = character(), replicated = logical())
         res = merge(res, rep, by = "gene_name", all.x = TRUE, sort = FALSE)
         res[, `:=`(comparison = paste0(cmp[1], "_vs_", cmp[2]), group1 = cmp[1], group2 = cmp[2])]
         return(res)
@@ -251,13 +236,17 @@ FindIsoforms = function(counts, groups, strata = NULL, ends = NULL, test = "chis
     #- ... and, with clusters compared across samples, a change in the same direction in each evaluable sample...
     all_results[, significant := !is.na(p.value.adjusted) & p.value.adjusted < threshold_pval & max_delta_PU >= threshold_var & (is.na(replicated) | replicated)]
     all_results[, test := test]
-    setorder(all_results, comparison, p.value.adjusted, gene_name, transcript_name, na.last = TRUE)
     all_results[, row := NULL]
-    first = c("comparison", "group1", "group2", "gene.tr", "gene_name", "transcript_name", lv,
-              "counts.group1", "counts.group2", "PU.group1", "PU.group2", "delta_PU", "top_isoform.group1", "top_isoform.group2", "switch",
-              "strand", "three_end", "te5", "dist_3end", "end_rank", "event_type", "delta_3end", "direction",
-              "thr.abund", "thr.var", "statistic", "p.value", "p.value.adjusted", "max_delta_PU",
-              "n_samples", "n_samples_consistent", "delta_PU_by_sample", "replicated", "significant", "test", "n_perm")
+    #- one row per isoform: gene-level columns first (repeated), then the isoform columns...
+    first = c("comparison", "group1", "group2", "gene_name", "significant", "event_type", "direction", "delta_3end",
+              "max_delta_PU", "p.value.adjusted", "p.value", "statistic", "switch", "top_isoform.group1", "top_isoform.group2",
+              "umis.group1", "umis.group2", "replicated", "replication_isoform", "n_samples", "n_samples_consistent", "delta_PU_by_sample",
+              "transcript_name", "tested", "counts.group1", "counts.group2", "PU.group1", "PU.group2", "delta_PU",
+              "dist_3end", "end_rank", "strand", "three_end", "te5", "thr.abund", "thr.var", "gene.tr", lv, "test", "n_perm")
     setcolorder(all_results, intersect(first, colnames(all_results)))
+    #- significant genes first, isoforms of a gene from the most proximal to the most distal 3' end...
+    all_results[, `:=`(o_sig = !significant, o_p = p.value.adjusted, o_d = -max_delta_PU)]
+    setorder(all_results, comparison, o_sig, o_p, o_d, gene_name, dist_3end, transcript_name, na.last = TRUE)
+    all_results[, c("o_sig", "o_p", "o_d") := NULL]
     return(all_results)
 }
