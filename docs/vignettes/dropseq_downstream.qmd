@@ -54,8 +54,6 @@ The functions used in this downstream analysis are provided by the R package sca
 ```{r scalpelR_install, eval=F}
 install.packages("remotes")
 remotes::install_github("Franzx7/scalpelR@dev")
-#- optional, pseudotime of the cells (heatmap along the differentiation)
-BiocManager::install("slingshot")
 library(scalpelR)
 ```
 
@@ -148,8 +146,7 @@ dge.obj = dge.obj %>% NormalizeData(verbose = F) %>% FindVariableFeatures(nfeatu
 #- cell type of each cluster: highest (scaled) marker score...
 markers = list(
     "hiPSCs" = c("POU5F1", "DPPA4", "LIN28A", "TDGF1", "L1TD1"),
-    "NPCs" = c("PAX6", "NES", "VIM", "HES5", "SOX2"),
-    "neurons" = c("DCX", "STMN2", "ELAVL4", "TUBB3", "SOX11"))
+    "NPCs" = c("PAX6", "NES", "VIM", "HES5", "SOX2"))
 dge.obj = AddModuleScore(dge.obj, features = markers, name = "score")
 scores = scale(as.matrix(dge.obj[[]][, paste0("score", seq_along(markers))]))
 cl = aggregate(scores, by = list(cluster = dge.obj$seurat_clusters), FUN = mean)
@@ -157,7 +154,7 @@ dge.obj$celltype = names(markers)[apply(cl[, -1], 1, which.max)][match(dge.obj$s
 table(dge.obj$orig.ident, dge.obj$celltype)
 ```
 
-The NPC library also contains a small population of early neurons (DCX, STMN2, ELAVL4):
+The marker-based cell types match the two libraries:
 
 ```{r gene_umap, echo=F}
 #| fig-width: 7
@@ -205,8 +202,8 @@ DimPlot(idge.obj, group.by = "celltype", label = T, repel = T, pt.size = .5, lab
 ### Differential isoform usage
 
 `scalpelR::FindIsoforms` tests the differential isoform usage between groups of cells with the same method as the pipeline
-(`differential/DIU_table.csv`). With more than 2 groups, each group is compared with the rest. We use the permutation test (cells as
-units) and the SCALPEL isoform annotation (3' ends):
+(`differential/DIU_table.csv`, here also hiPSCs vs NPCs). We use the permutation test (cells as units) and the SCALPEL isoform
+annotation (3' ends):
 
 ```{r diu_analysis}
 diu.table = FindIsoforms(
@@ -216,41 +213,35 @@ diu.table = FindIsoforms(
     isoform_annotation = "results/isoform",
     test = "permutation",
     cores = 8)
-#- genes with a differential isoform usage per comparison...
+#- genes with a differential isoform usage...
 diu.table %>% distinct(comparison, gene_name, event_type, direction) %>% count(comparison, event_type, direction)
 ```
 
 The table has one row per isoform of the genes with a differential isoform usage (adjusted p-value < 0.05, usage change >= 0.1), with its
-counts and usage (`PU`) in each group (`group1`: NPCs, `group2`: rest). The main columns:
+counts and usage (`PU`) in each group (`group1`: hiPSCs, `group2`: NPCs). The main columns, for genes with at least 200 UMIs in each group:
 
 ```{r diu_table}
 #- main columns of the table (all the columns are described in the pipeline output documentation)
 main_cols = c("gene_name", "transcript_name", "counts.group1", "counts.group2", "PU.group1", "PU.group2", "event_type", "direction", "p.value.adjusted")
-diu.table %>% filter(comparison == "NPCs_vs_rest", counts.group1 + counts.group2 > 0) %>%
+diu.table %>% filter(pmin(umis.group1, umis.group2) >= 200, counts.group1 + counts.group2 > 0) %>%
     select(all_of(main_cols)) %>%
     mutate(counts.group1 = round(counts.group1), counts.group2 = round(counts.group2), p.value.adjusted = format(p.value.adjusted, digits = 2)) %>%
     head(10) %>% knitr::kable(digits = 2)
 ```
 
-The tandem 3' UTR events (isoforms sharing their terminal exon) give the direction of the 3' UTR changes of each cell type vs the others:
+The tandem 3' UTR events (isoforms sharing their terminal exon) give the direction of the 3' UTR changes (`lengthening`: longer 3' UTRs
+in hiPSCs than in NPCs, `shortening`: shorter); the alternative terminal exon events have no direction:
 
 ```{r diu_direction}
-#| fig-width: 7
-#| fig-height: 3
-diu.table %>% filter(event_type == "tandem_3UTR") %>% distinct(comparison, gene_name, direction) %>%
-    mutate(comparison = factor(sub("_vs_rest", "", comparison), levels = rev(c("hiPSCs", "NPCs", "neurons")))) %>%
-    ggplot(aes(comparison, fill = direction)) + geom_bar(position = "fill", color = "black", linewidth = .2) +
-    scale_fill_manual(values = c(lengthening = "#1b9e77", shortening = "#d95f02")) +
-    xlab(NULL) + ylab("fraction of tandem 3' UTR genes") + ggtitle("3' UTR changes vs the other cell types") +
-    coord_flip() + theme_bw(base_size = 12)
+diu.table %>% distinct(gene_name, event_type, direction) %>% count(event_type, direction) %>% knitr::kable()
 ```
 
 ### Isoform usage of a gene
 
-For example, the gene **EIF1** uses more its isoform with the shorter 3' UTR (EIF1-204) in hiPSCs than in the other cells:
+For example, the gene **EIF1** uses more its isoform with the shorter 3' UTR (EIF1-204) in hiPSCs than in NPCs:
 
 ```{r eif1_table}
-diu.table %>% filter(gene_name == "EIF1", comparison == "hiPSCs_vs_rest", counts.group1 + counts.group2 > 0) %>%
+diu.table %>% filter(gene_name == "EIF1", counts.group1 + counts.group2 > 0) %>%
     select(all_of(main_cols)) %>%
     mutate(counts.group1 = round(counts.group1), counts.group2 = round(counts.group2), p.value.adjusted = format(p.value.adjusted, digits = 2)) %>%
     knitr::kable(digits = 2)
@@ -261,7 +252,7 @@ diu.table %>% filter(gene_name == "EIF1", comparison == "hiPSCs_vs_rest", counts
 ```{r eif1_usage}
 #| fig-width: 8
 #| fig-height: 4
-lv = c("hiPSCs", "NPCs", "neurons")
+lv = c("hiPSCs", "NPCs")
 plotUsage(idge.obj, gene_in = "EIF1", group_by = "celltype", isoform_annotation = "results/isoform", groups = lv)
 ```
 
@@ -270,7 +261,7 @@ The expression of its two most changing isoforms can also be visualized on the U
 ```{r eif1_umap}
 #| fig-width: 9
 #| fig-height: 4
-eif1 = diu.table %>% filter(gene_name == "EIF1", comparison == "hiPSCs_vs_rest") %>% arrange(-abs(delta_PU)) %>% head(2)
+eif1 = diu.table %>% filter(gene_name == "EIF1") %>% arrange(-abs(delta_PU)) %>% head(2)
 FeaturePlot(idge.obj, features = eif1$gene.tr, order = T, pt.size = .5, cols = c("gray85", "red"))
 ```
 
@@ -289,12 +280,12 @@ CoveragePlot(idge.obj, bamfiles = bams, gene_in = "EIF1", genome_gr = gtf, group
 ```
 
 Isoform switches between alternative terminal exons are also detected (no 3' UTR direction: the isoforms end in different exons), e.g. the most
-supported one in NPCs:
+supported one:
 
 ```{r alt_gene}
 #| fig-width: 8
 #| fig-height: 4
-alt_gene = diu.table %>% filter(comparison == "NPCs_vs_rest", event_type == "alternative_terminal_exon", switch == TRUE) %>%
+alt_gene = diu.table %>% filter(event_type == "alternative_terminal_exon", switch == TRUE) %>%
     distinct(gene_name, max_delta_PU, umis.group1, umis.group2) %>% arrange(-pmin(umis.group1, umis.group2) * max_delta_PU) %>% pull(gene_name) %>% head(1)
 alt_gene
 plotUsage(idge.obj, gene_in = alt_gene, group_by = "celltype", isoform_annotation = "results/isoform", groups = lv)
@@ -304,8 +295,9 @@ To browse the reads of a cell population (e.g. IGV), `scalpelR::subsetBAM` write
 column `Barcodes`):
 
 ```{r subset_bam, eval=F}
-neuron_barcodes = idge.obj[[]] %>% filter(celltype == "neurons") %>% pull(Barcodes)
-subsetBAM(bam_file = bams[["NPCs"]], barcodes = neuron_barcodes, output_file = "NPCs_neurons.bam", tag = "XC", cores = 4)
+#- e.g. the NPCs of one gene-level cluster...
+npc_barcodes = dge.obj[[]] %>% filter(celltype == "NPCs", seurat_clusters == "1") %>% pull(Barcodes)
+subsetBAM(bam_file = bams[["NPCs"]], barcodes = npc_barcodes, output_file = "NPCs_cluster1.bam", tag = "XC", cores = 4)
 ```
 
 ### 3' UTR length in single cells
@@ -339,7 +331,7 @@ p1 = utr3length_tab %>%
     ggplot(aes(x = group, y = wUTRlength.cell)) +
     geom_jitter(aes(color = group), width = .25, size = .6, alpha = .5) +
     geom_boxplot(fill = NA, width = .35, outlier.shape = NA, linewidth = .6) +
-    geom_text(data = med, aes(x = group, y = yl[2] + diff(yl) * .08, label = sprintf("%+.0f nt", m)), size = 4) +
+    geom_text(data = med, aes(x = group, y = yl[2] + diff(yl) * .08, label = ifelse(round(m) == 0, "0 nt", sprintf("%+.0f nt", m))), size = 4) +
     scale_color_manual(values = cols) +
     geom_hline(yintercept = 0, linetype = 2, color = "gray40") +
     coord_cartesian(ylim = c(yl[1], yl[2] + diff(yl) * .12)) +
@@ -353,24 +345,25 @@ p2 = FeaturePlot(idge.obj, features = "wUTRlength", pt.size = .6, order = F) %>%
     scale_color_gradientn(colors = rev(RColorBrewer::brewer.pal(11, "RdBu")), limits = c(-lim, lim), oob = scales::squish,
                           name = "3' UTR length\nvs average\ncell (nt)") +
     guides(color = guide_colorbar(barheight = unit(5, "cm"))) +
-    ggtitle("3' UTR length along the differentiation") +
+    ggtitle("3' UTR length per cell on the UMAP") +
     theme(plot.title = element_text(face = "plain", hjust = 0, size = 15))
 patchwork::wrap_plots(p1, p2, ncol = 2, widths = c(1, 1.1))
 ```
 
-hiPSCs and NPCs have similar 3' UTR lengths, while the early neurons have longer 3' UTRs, as described for the 3' UTR lengthening during
-neuronal differentiation. The changes between hiPSCs and NPCs are gene-specific (both lengthening and shortening, below).
+hiPSCs and NPCs have similar 3' UTR lengths on average: the 3' UTR changes between hiPSCs and NPCs are gene-specific, with both
+lengthening and shortening (below).
 
 ### Global 3' UTR shifts
 
 `scalpelR::plotShiftHeatmap` summarizes the 3' UTR changes of many genes: for each gene, the relative 3' UTR length (usage of its isoforms
-weighted by their 3' UTR length, from 0: shortest to 1: longest isoform) in each group of cells, scaled per gene (blue: shorter, red: longer
-3' UTR than the gene mean). Here, the 100 most variable genes with a tandem 3' UTR event, split in 3 clusters:
+weighted by their 3' UTR length, from 0: shortest to 1: longest isoform) in each group of cells, centered on the gene mean (blue: shorter,
+red: longer 3' UTR than the gene mean). With 2 groups, the values are not scaled (`scale = FALSE`) to show the size of the changes.
+Here, the 100 most variable genes with a tandem 3' UTR event, split in 2 clusters:
 
 ```{r shift_heatmap}
 #| fig-width: 6
 #| fig-height: 9
-p.shift = plotShiftHeatmap(idge.obj, annotation_gr = gtf, group_by = "celltype", groups = lv, genes = diu.table, n_clusters = 3)
+p.shift = plotShiftHeatmap(idge.obj, annotation_gr = gtf, group_by = "celltype", groups = lv, genes = diu.table, n_clusters = 2, scale = FALSE)
 p.shift
 ```
 
@@ -381,20 +374,8 @@ attr(p.shift, "shift") %>% distinct(cluster, gene_name) %>% group_by(cluster) %>
     summarise(genes = n(), examples = paste(head(as.character(gene_name), 8), collapse = ", ")) %>% knitr::kable()
 ```
 
-With a pseudotime (here computed with [slingshot](https://bioconductor.org/packages/slingshot) on the gene-level PCA, from the hiPSCs),
-the cells are ordered along the differentiation and pooled in bins of the same number of cells (`order_by`):
-
-```{r pseudotime}
-sl = slingshot::slingshot(Embeddings(dge.obj, "pca")[, 1:20], clusterLabels = dge.obj$celltype, start.clus = "hiPSCs", end.clus = "neurons")
-idge.obj$pseudotime = slingshot::slingPseudotime(sl)[match(colnames(idge.obj), colnames(dge.obj)), 1]
-```
-
-```{r shift_heatmap_pseudotime}
-#| fig-width: 8
-#| fig-height: 9
-plotShiftHeatmap(idge.obj, annotation_gr = gtf, group_by = "celltype", order_by = "pseudotime", n_bins = 15,
-    groups = lv, genes = diu.table, n_clusters = 3)
-```
+With a pseudotime of the cells (e.g. slingshot, Monocle3), `plotShiftHeatmap(..., order_by = "pseudotime")` shows the 3' UTR changes along
+the differentiation (see the [10x downstream vignette](chromium_downstream.html)).
 
 ## Further downstream analysis
 
