@@ -357,8 +357,8 @@ red: longer 3' UTR than the gene mean). With 2 groups, the values are not scaled
 Here, the 100 most variable genes with a tandem 3' UTR event, split in 2 clusters:
 
 ```{r shift_heatmap}
-#| fig-width: 6
-#| fig-height: 9
+#| fig-width: 7
+#| fig-height: 14
 p.shift = plotShiftHeatmap(idge.obj, annotation_gr = gtf, group_by = "celltype", groups = lv, genes = diu.table, n_clusters = 2, scale = FALSE)
 p.shift
 ```

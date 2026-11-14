@@ -373,8 +373,8 @@ weighted by their 3' UTR length, from 0: shortest to 1: longest isoform) in each
 genes with a tandem 3' UTR event, split in 3 clusters:
 
 ```{r shift_heatmap}
-#| fig-width: 6
-#| fig-height: 9
+#| fig-width: 7
+#| fig-height: 14
 p.shift = plotShiftHeatmap(idge.obj, annotation_gr = gtf, group_by = "celltype",
     groups = c("spermatocytes", "round spermatids", "elongating spermatids"), genes = diu.table, n_clusters = 3)
 p.shift
@@ -397,8 +397,8 @@ idge.obj$pseudotime = slingshot::slingPseudotime(sl)[match(colnames(idge.obj), c
 ```
 
 ```{r shift_heatmap_pseudotime}
-#| fig-width: 8
-#| fig-height: 9
+#| fig-width: 9
+#| fig-height: 14
 plotShiftHeatmap(idge.obj, annotation_gr = gtf, group_by = "celltype", order_by = "pseudotime", n_bins = 30,
     groups = c("spermatocytes", "round spermatids", "elongating spermatids"), genes = diu.table, n_clusters = 3)
 ```

@@ -30,7 +30,7 @@ trajectory (pseudotime), centered on the gene mean. Blue: 3' UTR shorter than th
   scale = TRUE,
   n_clusters = NULL,
   border = "black",
-  show_genes = NULL,
+  show_genes = TRUE,
   assay = "RNA"
 )
 </code></pre>
@@ -101,7 +101,7 @@ blocks (e.g. early / late shortening, lengthening), cluster of each gene in <cod
 </td></tr>
 <tr><td><code id="show_genes">show_genes</code></td>
 <td>
-<p>Show the gene names (default: if 60 genes or less).</p>
+<p>Show the gene names. Default <code>TRUE</code> (font size adapted to the number of genes).</p>
 </td></tr>
 <tr><td><code id="assay">assay</code></td>
 <td>
