@@ -5,6 +5,7 @@
   </picture>
 </h1>
 
+[![Documentation](https://readthedocs.org/projects/nf-core-scalpel/badge/?version=latest)](https://nf-core-scalpel.readthedocs.io/en/latest/)
 [![nf-test](https://img.shields.io/badge/unit_tests-nf--test-337ab7.svg)](https://www.nf-test.com)
 [![Nextflow](https://img.shields.io/badge/version-%E2%89%A526.04.0-green?style=flat&logo=nextflow&logoColor=white&color=%230DC09D&link=https%3A%2F%2Fnextflow.io)](https://www.nextflow.io/)
 [![nf-core template version](https://img.shields.io/badge/nf--core_template-3.4.1-green?style=flat&logo=nfcore&logoColor=white&color=%2324B064&link=https%3A%2F%2Fnf-co.re)](https://github.com/nf-core/tools/releases/tag/3.4.1)
@@ -30,6 +31,8 @@
 <div align="center">
   <img src="docs/images/SCALPEL_diagram.png" alt="SCALPEL pipeline overview" width="800">
 </div>
+
+Full documentation, tutorials and the scalpelR reference: **[nf-core-scalpel.readthedocs.io](https://nf-core-scalpel.readthedocs.io/en/latest/)**.
 
 ## Usage
 
@@ -96,7 +99,7 @@ The internal priming reference is built from `--genome`; a pre-built one can be 
 | `--diu_test`         | `chisq` | Differential isoform usage test: `chisq` or `permutation` (cells permuted).  |
 | `--diu_min_delta`    | `0.1`   | Minimal isoform usage change for a significant gene.                         |
 
-See the [usage documentation](docs/usage.md) for details.
+See the [usage documentation](https://nf-core-scalpel.readthedocs.io/en/latest/usage.html) for details.
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/usage/getting_started/configuration#custom-configuration-files).
@@ -113,12 +116,12 @@ See the [usage documentation](docs/usage.md) for details.
 | `probability/`   | Read distance distribution to the 3' end per sample.                                     |
 | `pipeline_info/` | Execution reports and software versions.                                                 |
 
-Intermediate files (`salmon/`, `transcript/`, `bed/`, `reads/`, `ip/`, `fragment/`, `cell/`, `em/`) are described in the [output documentation](docs/output.md).
+Intermediate files (`salmon/`, `transcript/`, `bed/`, `reads/`, `ip/`, `fragment/`, `cell/`, `em/`) are described in the [output documentation](https://nf-core-scalpel.readthedocs.io/en/latest/output.html).
 
 ### Downstream analysis
 
-- [10X Chromium example](https://raw.githack.com/plasslab/nf-core-scalpel/refs/heads/dev/docs/vignettes/chromium.html) · [downstream analysis](https://raw.githack.com/plasslab/nf-core-scalpel/refs/heads/dev/docs/vignettes/chromium_downstream.html)
-- [Drop-seq example](https://raw.githack.com/plasslab/nf-core-scalpel/refs/heads/dev/docs/vignettes/dropseq.html) · [downstream analysis](https://raw.githack.com/plasslab/nf-core-scalpel/refs/heads/dev/docs/vignettes/dropseq_downstream.html)
+- [10X Chromium example](https://nf-core-scalpel.readthedocs.io/en/latest/tutorials/chromium.html) · [downstream analysis](https://nf-core-scalpel.readthedocs.io/en/latest/tutorials/chromium_downstream.html)
+- [Drop-seq example](https://nf-core-scalpel.readthedocs.io/en/latest/tutorials/dropseq.html) · [downstream analysis](https://nf-core-scalpel.readthedocs.io/en/latest/tutorials/dropseq_downstream.html)
 
 ### Testing
 
