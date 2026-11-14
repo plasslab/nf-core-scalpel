@@ -223,13 +223,27 @@ The tandem 3' UTR events (isoforms sharing their terminal exon) give the directi
 spermatids, longer 3' UTRs in spermatocytes, as described for the global 3' UTR shortening during spermatogenesis:
 
 ```{r diu_direction}
-#| fig-width: 7
+#| fig-width: 8
 #| fig-height: 3.5
-diu.table %>% filter(event_type == "tandem_3UTR") %>% distinct(comparison, gene_name, direction) %>%
-    ggplot(aes(sub("_vs_rest", "", comparison), fill = direction)) + geom_bar(position = "fill", color = "black", linewidth = .2) +
-    scale_fill_manual(values = c(lengthening = "#1b9e77", shortening = "#d95f02")) +
-    xlab(NULL) + ylab("fraction of tandem 3' UTR genes") + ggtitle("3' UTR changes vs the other cell types") +
-    coord_flip() + theme_bw(base_size = 12)
+#- genes with a tandem 3' UTR change per cell type: shortening (left) & lengthening (right)...
+dir.tab = diu.table %>% filter(event_type == "tandem_3UTR") %>% distinct(comparison, gene_name, direction) %>%
+    count(comparison, direction) %>% group_by(comparison) %>% mutate(frac = n / sum(n)) %>% ungroup() %>%
+    mutate(celltype = factor(sub("_vs_rest", "", comparison), levels = rev(c("spermatocytes", "round spermatids", "elongating spermatids"))),
+           x = ifelse(direction == "shortening", -n, n))
+xmax = max(abs(dir.tab$x)) * 1.35
+ggplot(dir.tab, aes(x, celltype, fill = direction)) +
+    geom_col(width = .62, color = "black", linewidth = .25) +
+    geom_vline(xintercept = 0, linewidth = .6) +
+    geom_text(aes(label = paste0(n, " (", round(100 * frac), "%)"), hjust = ifelse(x < 0, 1.12, -.12)), size = 3.8) +
+    annotate("text", x = c(-xmax, xmax) * .97, y = 3.62, label = c("\u2190 shorter 3' UTRs", "longer 3' UTRs \u2192"),
+             hjust = c(0, 1), color = c("#2166AC", "#B2182B"), fontface = "bold", size = 4.2) +
+    scale_fill_manual(values = c(shortening = "#2166AC", lengthening = "#B2182B"), guide = "none") +
+    scale_x_continuous(limits = c(-xmax, xmax), labels = abs) +
+    scale_y_discrete(expand = expansion(add = c(.5, .85))) +
+    labs(x = "genes with a tandem 3' UTR change", y = NULL, title = "3' UTR changes vs the other cell types") +
+    theme_minimal(base_size = 13) +
+    theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(), axis.text.y = element_text(color = "black"),
+          plot.title = element_text(face = "bold"))
 ```
 
 ### Isoform usage of a gene
