@@ -61,7 +61,7 @@ These tests are run both with the latest available version of `Nextflow` and als
 
 ## Getting help
 
-For further information/help, please consult the [nf-core/scalpel documentation](https://nf-co.re/scalpel/usage) and don't hesitate to get in touch on the nf-core Slack [#scalpel](https://nfcore.slack.com/channels/scalpel) channel ([join our Slack here](https://nf-co.re/join/slack)).
+For further information/help, please consult the [nf-core/scalpel documentation](https://nf-core-scalpel.readthedocs.io/en/latest/) and don't hesitate to get in touch on the nf-core Slack [#scalpel](https://nfcore.slack.com/channels/scalpel) channel ([join our Slack here](https://nf-co.re/join/slack)).
 
 ## Pipeline contribution conventions
 

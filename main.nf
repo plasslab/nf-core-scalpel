@@ -4,7 +4,7 @@
     nf-core/scalpel
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Github : https://github.com/nf-core/scalpel
-    Website: https://nf-co.re/scalpel
+    Website: https://nf-core-scalpel.readthedocs.io/en/latest/
     Slack  : https://nfcore.slack.com/channels/scalpel
 ----------------------------------------------------------------------------------------
 */

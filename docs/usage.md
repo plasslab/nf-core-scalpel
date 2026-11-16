@@ -1,8 +1,6 @@
 # nf-core/scalpel: Usage
 
-## :warning: Please read this documentation on the nf-core website: [https://nf-co.re/scalpel/usage](https://nf-co.re/scalpel/usage)
-
-> _Documentation of pipeline parameters is generated automatically from the pipeline schema and can no longer be found in markdown files._
+> This page is part of the documentation site: [nf-core-scalpel.readthedocs.io](https://nf-core-scalpel.readthedocs.io/en/latest/usage.html).
 
 ## Introduction
 

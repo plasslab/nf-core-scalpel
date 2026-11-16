@@ -145,7 +145,7 @@ Use `-profile docker`, `singularity` or `apptainer` instead of `conda` (add `emu
 | `--gene_fraction` | `98%` | Genes used to learn the read distance distribution. |
 | `--binsize` | `20` | Bin size (nt) of the read distance distribution. |
 
-See the [usage documentation](https://github.com/plasslab/nf-core-scalpel/blob/dev/docs/usage.md) for all options.
+See the [usage documentation](https://nf-core-scalpel.readthedocs.io/en/latest/usage.html) for all options.
 
 ### Results
 
@@ -228,7 +228,7 @@ Following the successful execution of SCALPEL, the output directory (`results`) 
 - **pipeline_info/**:  
   Execution reports and software versions.
 
-The other directories contain intermediate files of each step (see the [output documentation](https://github.com/plasslab/nf-core-scalpel/blob/dev/docs/output.md)).
+The other directories contain intermediate files of each step (see the [output documentation](https://nf-core-scalpel.readthedocs.io/en/latest/output.html)).
 
 ``` sh
 > tree -L 2 results
