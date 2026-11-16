@@ -165,10 +165,9 @@ reads, so such isoforms were mostly split by their TPM prior (250 isoforms, 1.3%
 whereas reads keep the 3' signal up to ~600 nt (further upstream, the read density is gene body
 background). Use `--distance_profile 600` to reproduce the original isoform selection.
 
-The default `--distance_3end` is 100 nt (original SCALPEL: 50 nt). Simulating two isoforms with
-identical exons and 3' ends 50-100 nt apart with the GSE104556 read distribution, the per-cell
-fraction estimates are no better than an uninformative guess and pooled estimates are off by
-6-15 points, so such isoforms are collapsed (276 more isoforms, 1.4%, on GSE104556). Use
+The default `--distance_3end` is 100 nt (original SCALPEL: 50 nt): isoforms with identical exons
+and 3' ends 50-100 nt apart are not resolved by 3'-tagged reads and are collapsed (276 more
+isoforms, 1.4%, on GSE104556). Use
 `--distance_3end 50 --distance_profile 600` to reproduce the original isoform selection.
 
 ## Read distance distribution
@@ -238,9 +237,7 @@ each against the rest of the cells. Isoforms below 5% of the gene counts in both
 | `permutation`           | Same X2 statistic, null distribution from permutations of the **cells** between the compared groups (`--diu_permutations`, default 10000). |
 
 The X2 test ignores that isoform usage varies from cell to cell: with thousands of cells, small
-changes become highly significant (on simulated cells with identical usage in both groups but
-cell-to-cell variability, 60% of the genes have p < 0.05 with `chisq`, 4% with `permutation`).
-The permutation test uses the cells as units, needs no replicates, and with `--clusters` permutes
+changes become highly significant. The permutation test uses the cells as units, needs no replicates, and with `--clusters` permutes
 the cells **within each sample**, so that a difference between samples (batch) is not reported as
 a difference between clusters that are unevenly distributed across samples. Samples compared to each
 other (no `--clusters`) are single observations: differences between them can be technical or
