@@ -7,6 +7,11 @@
 DGE count matrix, `--sequencing_platform dropseq`). The FASTQ files are also needed for the salmon pseudobulk quantification
 ([samplesheet](usage.md#samplesheet-input)).
 
+**Which 10x Chromium chemistry versions are supported (v2, v3, v3.1, v4)?**
+All of them. The cell barcodes and UMIs are read from the `CB`/`UB` tags of the aligned BAM file (`XC`/`XM` for Drop-seq), not from the
+FASTQ read structure, so the UMI length (10 nt in v2, 12 nt in v3/v4) does not matter. Other protocols work if their BAM files carry
+corrected cell barcode and UMI tags (e.g. STARsolo with `--outSAMattributes CB UB`).
+
 **The pipeline stops because the BAM and the GTF share no chromosome name.**
 The BAM files, the GTF and the genome must use the same chromosome names (e.g. GENCODE/UCSC `chr1` vs Ensembl `1`). Use references from
 the same source as the reference of your BAM files ([details](usage.md#chromosome-names-must-match)).
@@ -47,6 +52,13 @@ samples). `NA`: replication not applicable (samples compared, or each cluster in
 **A step fails with an out-of-memory error.**
 Cap or raise the resources with a configuration file passed with `-c` (see [Installation](installation.md#resources)) and restart the
 run with `-resume`: the completed steps are not run again.
+
+**The salmon step seems stuck or fails.**
+The salmon pseudobulk quantification is usually the longest step (one task per sample). A task that runs for hours without output is
+most often short of memory or disk, or slowed down by a network file system: check the task's `.command.log` / `.command.err` in its
+work directory and the free space, give salmon more resources (`process_high` label, see [Installation](installation.md#resources)),
+use a local `-work-dir`, and restart with `-resume`. For 10x data, R1 (barcode + UMI, shorter than the salmon k-mer size of 31) does not
+map and salmon quantifies the R2 reads as orphans: this is expected and not the cause of a failure.
 
 **How long does a run take?**
 On the full datasets of the tutorials (2 samples, 64 CPUs): about 1 h 10 min for 10x Chromium (GSE104556) and 40 min for Drop-seq
